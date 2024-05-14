@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar__title">Dashboard</div>
+    <ul class="navbar__menu">
+      <li class="navbar__item"><a href="dashboard.html">Home</a></li>
+      <li class="navbar__item dropdown">
+        <div class="dropdown__button">Menu</div>
+        <div class="dropdown__content">
+          <div class="dropdown__item" onclick="navigateTo('profile.html')">Profile</div>
+          <div class="dropdown__item" onclick="navigateTo('job_application.html')">Job Application</div>
+          <div class="dropdown__item" onclick="navigateTo('travel_history.html')">Travel History</div>
+          <div class="dropdown__item" onclick="navigateTo('movies.html')">Movies</div>
+          <div class="dropdown__item" onclick="navigateTo('songs.html')">Songs</div>
+        </div>
+      </li>
+    </ul>
+  </nav>
+  <div class="container">
+    <h1 class="dashboard__title">Welcome to Dashboard</h1>
+    <!-- Your dashboard content goes here -->
+  </div>
+  <script>
+    function navigateTo(page) {
+      window.location.href = page;
+    }
+  </script>
+</body>
+</html>
