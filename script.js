@@ -30,3 +30,16 @@ function saveprofile() {
     // Navigate to the update_screen page
     window.location.href = "update_screen.html";
 }
+// script.js
+
+// Function to handle logout
+function logout() {
+    // Perform logout process (e.g., sign out from Firebase, clear session storage, etc.)
+    // For demonstration purposes, let's clear session storage
+    sessionStorage.clear();
+    // Redirect to the index page
+    window.location.href = "index.html";
+}
+
+// Add an event listener to the logout button
+document.getElementById('logout').addEventListener('click', logout);
