@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="style.css">
+  <script type="module" src="./homepage.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 </head>
 <body style="background: linear-gradient(#776BCC, #776BCC);">
@@ -21,9 +22,6 @@
           <li class="nav-item">
             <a class="nav-link active" aria-current="page" href="#">Home</a>
           </li>
-          <!-- <li class="nav-item">
-            <a class="nav-link" href="#">Link</a>
-          </li> -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="Profile.html" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Profile
@@ -35,14 +33,10 @@
               <li><a class="dropdown-item" href="#">Movies</a></li>
             </ul>
           </li>
-          <!-- <li class="nav-item">
-            <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-          </li> -->
         </ul>
-        <!-- <form class="d-flex" role="search">
-          <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
-          <button class="btn btn-outline-success" type="submit">Search</button>
-        </form> -->
+        <ul>
+          <button type="button" class="btn btn-outline-danger" id="logout" style="margin-left: 65%; margin-top: 1%;">Logout</button>
+        </ul>
       </div>
     </div>
   </nav>

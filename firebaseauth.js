@@ -28,8 +28,8 @@
  const signUp=document.getElementById('submitSignUp');
  signUp.addEventListener('click', (event)=>{
     event.preventDefault();
-    const email=document.getElementById('mail').value;
-    const password=document.getElementById('passkey').value;
+    const email=document.getElementById('rEmail').value;
+    const password=document.getElementById('rPassword').value;
     const firstName=document.getElementById('fName').value;
     const lastName=document.getElementById('lName').value;
 
@@ -78,7 +78,7 @@
         showMessage('login is successful', 'signInMessage');
         const user=userCredential.user;
         localStorage.setItem('loggedInUserId', user.uid);
-        window.location.href='homepage.html';
+        window.location.href='dashboard.html';
     })
     .catch((error)=>{
         const errorCode=error.code;
