@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Job Application</title>
+  <title>Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="style2.css">
   <script type="module" src="./homepage.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel='stylesheet' href='https://use.fontawesome.com/releases/v5.2.0/css/all.css'>
+  <link rel='stylesheet' href='https://use.fontawesome.com/releases/v5.2.0/css/fontawesome.css'>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
@@ -26,9 +27,10 @@
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Job Application
+              Items List
             </a>
             <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="job_application.html">Job Application</a></li>
               <li><a class="dropdown-item" href="Profile.html">Profile</a></li>
               <li><a class="dropdown-item" href="travel.html">Travel History</a></li>
               <li><a class="dropdown-item" href="music.html">Music</a></li>
@@ -43,69 +45,12 @@
     </div>
   </nav>
   <div class="container">
-    <h2 style="text-align: center; margin-bottom: 20px; margin-top:  20px;">Job Tracker</h2>
-    
+    <h1 class="dashboard__title">Welcome to Music page</h1>
   </div>
-
-  <div class="container" style="text-align: center;">
-    <img src="Image.png" style="text-align: center;" alt="Job Tracking">
-  </div>
-  
-  <div style="margin-top: 40px"></div>
-  
-
-  <div class="container" style="text-align: center;">
-    <div class="tab">
-      <button class="tablinks" onclick="openCity(event, 'Application')">Application</button>
-      <button class="tablinks" onclick="openCity(event, 'Interview')">Interview</button>
-    </div>
-    
-    <div id="Application" class="tabcontent" style="display: none;">
-      <h3>Application</h3>
-      <p>we can apply here.</p>
-    </div>
-    
-    <div id="Interview" class="tabcontent" style="display: none;">
-      <h3>Interview</h3>
-      <p>we can sechedule interview .</p> 
-    </div>
-  </div>
-
-
-
-<script>
-function openCity(evt, job) {
-  var i, tabcontent, tablinks;
-  tabcontent = document.getElementsByClassName("tabcontent");
-  for (i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = "none";
-  }
-  tablinks = document.getElementsByClassName("tablinks");
-  for (i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(" active", "");
-  }
-  document.getElementById(job).style.display = "block";
-  evt.currentTarget.className += " active";
-
-}
-
-
-</script>
-
-  
-
-  <!-- <div class="container">
-    <div class="col-lg-4">
-      <h2 class="tile">Job Listings</h2>
-    </div> 
-    <div class="col-lg-4">
-      <h2 class="tile">Interviews</h2>
-    </div>
-    <div class="col-lg-4">
-      <h2 class="tile">Contact Us</h2>
-    </div>
-  </div>
-
-  <script src="script.js"></script>-->
+  <script>
+    function navigateTo(page) {
+      window.location.href = page;
+    }
+  </script>
 </body>
 </html>
