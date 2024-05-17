@@ -43,7 +43,7 @@
     </div>
   </nav>
   <div class="container">
-    <h2 style="text-align: center; margin-bottom: 20px; margin-top:  20px;">Job Tracker</h2>
+    <h2 style="text-align: center; margin-bottom: 20px; margin-top: 20px;">Job Tracker</h2>
   </div>
 
   <div class="container" style="text-align: center;">
@@ -52,23 +52,24 @@
   <div style="margin-top: 40px"></div>
   <div class="container" style="text-align: center;">
     <div class="tab">
-      <button class="tablinks btn btn btn-danger" onclick="openCity(event, 'Application')">Application</button>
+      <button class="tablinks btn btn-danger" onclick="openCity(event, 'Application')">Application</button>
       <button class="tablinks btn btn-success" onclick="openCity(event, 'Interview')">Interview</button>
+      <button class="tablinks btn btn-primary" onclick="window.location.href='view_applications.html'">View Applications</button>
     </div>
     
-    <div id="Application" class="tabcontent" style="display: none;background-color: #fff;border-radius: 10px;">
+    <div id="Application" class="tabcontent" style="display: none; background-color: #fff; border-radius: 10px;">
       <h3>Application</h3>
       <div style="display: inline-block;">
-        <p style="background-color: darkseagreen;border-radius: 7px;">Total Number of Applications applied:</p>
-        <p id="totalApplications" style="background-color: indianred;border-radius: 7px;">Loading...</p>
+        <p style="background-color: darkseagreen; border-radius: 7px;">Total Number of Applications applied:</p>
+        <p id="totalApplications" style="background-color: indianred; border-radius: 7px;">Loading...</p>
       </div>
     </div>
     
-    <div id="Interview" class="tabcontent" style="display: none;background-color: #fff;border-radius: 10px;">
+    <div id="Interview" class="tabcontent" style="display: none; background-color: #fff; border-radius: 10px;">
       <h3>Interview</h3>
       <div style="display: inline-block;">
-        <p style="background-color: darkseagreen;border-radius: 7px;">Total Number of interviews scheduled</p>
-        <p id="totalInterviews" style="background-color: indianred;border-radius: 7px;">Loading...</p> 
+        <p style="background-color: darkseagreen; border-radius: 7px;">Total Number of interviews scheduled</p>
+        <p id="totalInterviews" style="background-color: indianred; border-radius: 7px;">Loading...</p> 
       </div>
     </div>
   </div>
