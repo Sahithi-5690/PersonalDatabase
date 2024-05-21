@@ -232,6 +232,44 @@ app.put('/jobapplication/:id', (req, res) => {
     });
 });
 
+// Endpoint to save profile data
+app.post('/profile', (req, res) => {
+    const profileData = req.body;
+
+    // Validate input data
+    // Example validation: Check if required fields are present
+    if (!profileData.firstName || !profileData.surname || !profileData.email) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const sql = `
+        INSERT INTO userprofile (firstName, lastname, phoneNumber, addressLine1, addressLine2, postcode, state, area, email, education, country, region)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    const values = [
+        profileData.firstName,
+        profileData.surname,
+        profileData.phoneNumber,
+        profileData.addressLine1,
+        profileData.addressLine2,
+        profileData.postcode,
+        profileData.state,
+        profileData.area,
+        profileData.email,
+        profileData.education,
+        profileData.country,
+        profileData.region
+    ];
+
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.error('Error saving profile data:', err);
+            return res.status(500).json({ error: 'Failed to save profile data' });
+        }
+        return res.status(200).json({ message: 'Profile data saved successfully' });
+    });
+});
+
 
 
 

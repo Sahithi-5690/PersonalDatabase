@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Update Profile</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
       background: linear-gradient(#776BCC, #776BCC);
@@ -92,29 +92,17 @@
 
   <script>
     // Retrieve details from sessionStorage and populate the inputs
-    var firstName = sessionStorage.getItem('firstName');
-    var surname = sessionStorage.getItem('surname');
-    var mobile = sessionStorage.getItem('phoneNumber');
-    var email = sessionStorage.getItem('email');
-    var addressLine1 = sessionStorage.getItem('addressLine1');
-    var addressLine2 = sessionStorage.getItem('addressLine2');
-    var postalCode = sessionStorage.getItem('postcode');
-    var state = sessionStorage.getItem('state');
-    var area = sessionStorage.getItem('area');
-    var country = sessionStorage.getItem('country');
-    var education = sessionStorage.getItem('education');
-    
-    document.getElementById('firstNameInput').value = firstName;
-    document.getElementById('surnameInput').value = surname;
-    document.getElementById('mobileInput').value = mobile;
-    document.getElementById('emailInput').value = email;
-    document.getElementById('addressLine1Input').value = addressLine1;
-    document.getElementById('addressLine2Input').value = addressLine2;
-    document.getElementById('postalCodeInput').value = postalCode;
-    document.getElementById('stateInput').value = state;
-    document.getElementById('areaInput').value = area;
-    document.getElementById('countryInput').value = country;
-    document.getElementById('educationInput').value = education;
+    document.getElementById('firstNameInput').value = sessionStorage.getItem('firstName') || '';
+    document.getElementById('surnameInput').value = sessionStorage.getItem('surname') || '';
+    document.getElementById('mobileInput').value = sessionStorage.getItem('phoneNumber') || '';
+    document.getElementById('emailInput').value = sessionStorage.getItem('email') || '';
+    document.getElementById('addressLine1Input').value = sessionStorage.getItem('addressLine1') || '';
+    document.getElementById('addressLine2Input').value = sessionStorage.getItem('addressLine2') || '';
+    document.getElementById('postalCodeInput').value = sessionStorage.getItem('postcode') || '';
+    document.getElementById('stateInput').value = sessionStorage.getItem('state') || '';
+    document.getElementById('areaInput').value = sessionStorage.getItem('area') || '';
+    document.getElementById('countryInput').value = sessionStorage.getItem('country') || '';
+    document.getElementById('educationInput').value = sessionStorage.getItem('education') || '';
 
     // Event listener for Confirm Details button
     document.getElementById('confirmDetailsBtn').addEventListener('click', function() {
@@ -143,11 +131,11 @@
         // Store updated details in session storage
         sessionStorage.setItem('firstName', updatedFirstName);
         sessionStorage.setItem('surname', updatedSurname);
-        sessionStorage.setItem('mobile', updatedMobile);
+        sessionStorage.setItem('phoneNumber', updatedMobile);
         sessionStorage.setItem('email', updatedEmail);
         sessionStorage.setItem('addressLine1', updatedAddressLine1);
         sessionStorage.setItem('addressLine2', updatedAddressLine2);
-        sessionStorage.setItem('postalCode', updatedPostalCode);
+        sessionStorage.setItem('postcode', updatedPostalCode);
         sessionStorage.setItem('state', updatedState);
         sessionStorage.setItem('area', updatedArea);
         sessionStorage.setItem('country', updatedCountry);
@@ -155,13 +143,12 @@
 
         // Delay navigation after displaying the emoji
         setTimeout(function() {
-          window.location.href = "Profile.html";
+          window.location.href = "profile.html";
         }, 2000); // Change 2000 to the desired delay in milliseconds (2 seconds in this example)
       } else {
         emojiResult.innerText = '❌'; // Display cross mark emoji
       }
     });
   </script>
-
 </body>
 </html>
