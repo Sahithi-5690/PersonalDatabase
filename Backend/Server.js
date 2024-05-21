@@ -55,7 +55,7 @@ app.get('/reminder', (req, res) => {
 
 // Endpoint to get the count of interviews scheduled
 app.get('/reminder/interview/count', (req, res) => {
-    const sql = "SELECT COUNT(*) AS totalInterviews FROM reminder WHERE reminderType = 'Thank You'";
+    const sql = "SELECT COUNT(*) AS totalInterviews FROM jobapplication WHERE status = 'Accepted'";
     db.query(sql, (err, data) => {
         if (err) {
             console.error('Error executing query:', err);
@@ -77,19 +77,21 @@ app.get('/jobapplication/count', (req, res) => {
     });
 });
 
+// Endpoint to get all job applications with a new SNO column
 app.get('/jobapplication', (req, res) => {
-    const sql = "SELECT * FROM JobApplication";
+    const sql = "SELECT *, @serial := @serial + 1 AS sno FROM JobApplication, (SELECT @serial := 0) AS init";
     db.query(sql, (err, data) => {
         if (err) return res.json(err);
 
         // Convert data to HTML table with edit and delete buttons
         let html = '<table>';
-        html += '<thead><tr><th>Job Application ID</th><th>Job Title</th><th>Job Description</th><th>Contact Info</th><th>Salary Range</th><th>Experience</th><th>Company</th><th>Date Applied</th><th>Job Type</th><th>Resume</th><th>Cover Letter</th><th>Status</th><th>Interview Date</th><th>Interviewer</th><th>Feedback</th><th>Offer Status</th><th>Acceptance Status</th><th>Start Date</th><th>Actions</th></tr></thead>';
+        html += '<thead><tr><th>SNO</th><th>Job Title</th><th>Job Description</th><th>Contact Info</th><th>Salary Range</th><th>Experience</th><th>Company</th><th>Date Applied</th><th>Job Type</th><th>Resume</th><th>Cover Letter</th><th>Status</th><th>Interview Date</th><th>Interviewer</th><th>Feedback</th><th>Offer Status</th><th>Acceptance Status</th><th>Start Date</th><th>Actions</th></tr></thead>';
         html += '<tbody>';
 
         data.forEach(row => {
             html += '<tr>';
-            html += '<td>' + row.jobApplicationId + '</td>';
+            html += '<td>' + row.sno + '</td>';
+           // html += '<td>' + row.jobApplicationId + '</td>';
             html += '<td>' + row.jobTitle + '</td>';
             html += '<td>' + row.jobDescription + '</td>';
             html += '<td>' + row.contactInfo + '</td>';
@@ -101,12 +103,12 @@ app.get('/jobapplication', (req, res) => {
             html += '<td>' + row.resume + '</td>';
             html += '<td>' + row.coverLetter + '</td>';
             html += '<td>' + row.status + '</td>';
-            html += '<td>' + (row.interviewDate || '') + '</td>';
-            html += '<td>' + (row.interviewer || '') + '</td>';
-            html += '<td>' + (row.feedback || '') + '</td>';
-            html += '<td>' + (row.offerStatus || '') + '</td>';
-            html += '<td>' + (row.acceptanceStatus || '') + '</td>';
-            html += '<td>' + (row.startDate || '') + '</td>';
+            html += '<td>' + row.interviewDate + '</td>';
+            html += '<td>' + row.interviewer + '</td>';
+            html += '<td>' + row.feedback + '</td>';
+            html += '<td>' + row.offerStatus + '</td>';
+            html += '<td>' + row.acceptanceStatus + '</td>';
+            html += '<td>' + row.startDate + '</td>';
             html += '<td class="btn-container">';
             html += '<button class="btn btn-primary" onclick="editApplication(' + row.jobApplicationId + ')">Edit</button>';
             html += '<button class="btn btn-danger" onclick="deleteApplication(' + row.jobApplicationId + ')">Delete</button>';
@@ -119,6 +121,9 @@ app.get('/jobapplication', (req, res) => {
         res.send(html);
     });
 });
+
+
+
 
 
 // Endpoint to delete a job application

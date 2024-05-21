@@ -31,9 +31,15 @@
 </head>
 <body>
   <div class="container">
-    <h2 style="text-align: center; margin-bottom: 20px; margin-top: 20px;">Job Applications</h2>
+    <div style="margin-bottom: 20px;">
+        <a href="http://127.0.0.1:5501/PersonalDB/job_application.html" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+    <h2 style="text-align: center; margin-bottom: 20px;">Job Applications</h2>
     <div id="applicationsTable"></div>
   </div>
+
 
   <div class="modal fade" id="editApplicationModal" tabindex="-1" aria-labelledby="editApplicationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -134,30 +140,13 @@
       });
     });
     
+    
     function fetchJobApplications() {
     fetch('http://localhost:8081/jobapplication')
         .then(response => response.text())
         .then(data => {
             const applicationsTableElement = document.getElementById('applicationsTable');
-            applicationsTableElement.innerHTML = data;
-
-            // Set data-id attribute for each table row, starting from the second row (skipping the header row)
-            const tableRows = Array.from(applicationsTableElement.querySelectorAll('tr')).slice(1);
-            tableRows.forEach((row, index) => {
-                const id = row.cells[0].textContent; // Get the text content of the first cell
-                if (id) {
-                    row.dataset.id = id; // Set data-id attribute if ID is not empty
-                }
-            });
-
-            // Add event listeners to edit buttons
-            const editButtons = document.querySelectorAll('.edit-button');
-            editButtons.forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const jobApplicationId = event.target.closest('tr').dataset.id;
-                    editApplication(jobApplicationId);
-                });
-            });
+            applicationsTableElement.innerHTML = data; // Insert HTML response directly into the DOM
         })
         .catch(error => {
             console.error('Error fetching job applications:', error);
@@ -165,7 +154,6 @@
             applicationsTableElement.textContent = 'Error loading data';
         });
 }
-
 
 
 function editApplication(jobApplicationId) {
