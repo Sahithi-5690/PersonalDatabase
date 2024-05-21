@@ -57,4 +57,38 @@ document.getElementById('logout').addEventListener('click', logout);
 //     document.getElementById(job).style.display = "block";
 //     evt.currentTarget.className += " active";
 //   }
-   
+import { useHistory } from 'react-router-dom';
+
+const EditApplicationForm = ({ applicationId }) => {
+    const history = useHistory();
+
+    const handleSaveChanges = async () => {
+        try {
+            // Make PUT request to update job application
+            const response = await fetch(`http://localhost:8081/jobapplication/${applicationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(applicationData) // Your application data object
+            });
+
+            if (response.ok) {
+                // If successful, redirect to view_applications.html
+                window.location.href = 'http://127.0.0.1:5501/PersonalDB/view_applications.html';
+            } else {
+                // Handle other response statuses/errors
+            }
+        } catch (error) {
+            // Handle error
+        }
+    };
+
+    return (
+        <div>
+            {/* Edit application form */}
+            <button onClick={handleSaveChanges}>Save Changes</button>
+        </div>
+    );
+};
+

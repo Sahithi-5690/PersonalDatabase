@@ -145,6 +145,89 @@ app.delete('/jobapplication/:id', (req, res) => {
     });
 });
 
+// Endpoint to get a specific job application by ID
+app.get('/jobapplication/:id', (req, res) => {
+    const { id } = req.params;
+    const sql = "SELECT * FROM JobApplication WHERE jobApplicationId = ?";
+    db.query(sql, [id], (err, data) => {
+        if (err) {
+            console.error('Error fetching job application:', err);
+            return res.status(500).json({ error: err });
+        }
+        if (data.length === 0) {
+            return res.status(404).json({ message: 'Job application not found' });
+        }
+        return res.json(data[0]);
+    });
+});
+
+// PUT endpoint to update a job application
+app.put('/jobapplication/:id', (req, res) => {
+    const { id } = req.params;
+    const applicationData = req.body;
+
+    // Validate input data
+    // Example validation: Check if required fields are present
+    if (!applicationData.jobTitle || !applicationData.contactInfo) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const sql = `
+        UPDATE JobApplication 
+        SET 
+            jobTitle = ?, 
+            jobDescription = ?, 
+            contactInfo = ?, 
+            salaryRange = ?, 
+            experience = ?, 
+            company = ?, 
+            dateApplied = ?, 
+            jobType = ?, 
+            resume = ?, 
+            coverLetter = ?, 
+            status = ?, 
+            interviewDate = ?, 
+            interviewer = ?, 
+            feedback = ?, 
+            offerStatus = ?, 
+            acceptanceStatus = ?, 
+            startDate = ? 
+        WHERE jobApplicationId = ?`;
+
+    const values = [
+        applicationData.jobTitle, 
+        applicationData.jobDescription, 
+        applicationData.contactInfo, 
+        applicationData.salaryRange, 
+        applicationData.experience, 
+        applicationData.company, 
+        applicationData.dateApplied, 
+        applicationData.jobType, 
+        applicationData.resume, 
+        applicationData.coverLetter, 
+        applicationData.status, 
+        applicationData.interviewDate, 
+        applicationData.interviewer, 
+        applicationData.feedback, 
+        applicationData.offerStatus, 
+        applicationData.acceptanceStatus, 
+        applicationData.startDate, 
+        id
+    ];
+
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.error('Error updating job application:', err);
+            return res.status(500).json({ error: 'Failed to update job application' });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Job application not found' });
+        }
+        return res.status(200).json({ message: 'Application updated successfully' });
+    });
+});
+
+
 
 
 app.listen(8081, () => {
