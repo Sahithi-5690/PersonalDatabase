@@ -4,7 +4,7 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // Add this line to parse JSON request bodies
+app.use(express.json()); // This line parses JSON request bodies
 
 // Database connection setup
 const db = mysql.createConnection({
@@ -26,7 +26,44 @@ app.get('/', (req, res) => {
     return res.json("From Backend");
 });
 
-//Endpoint to get the count of interviews
+// Route for handling form submission
+app.post('/job_applications', (req, res) => {
+    const {
+      jobTitle, jobDescription, contactInfo, salaryRange, experience,
+      company, dateApplied, jobType, resume, coverLetter, status,
+      interviewDate, interviewer, feedback, offerStatus, acceptanceStatus,
+      startDate, location
+    } = req.body;
+  
+    const sql = `
+      INSERT INTO jobapplication (
+        jobTitle, jobDescription, contactInfo, salaryRange, experience,
+        company, dateApplied, jobType, resume, coverLetter, status,
+        interviewDate, interviewer, feedback, offerStatus, acceptanceStatus,
+        startDate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+  
+    const values = [
+      jobTitle, jobDescription, contactInfo, salaryRange, experience,
+      company, dateApplied, jobType, resume, coverLetter, status,
+      interviewDate, interviewer, feedback, offerStatus, acceptanceStatus,
+      startDate
+    ];
+  
+    // Use db instead of connection
+    db.query(sql, values, (err, result) => {
+      if (err) {
+        console.error('Error inserting data:', err);
+        res.status(500).send('Error inserting data');
+        return;
+      }
+      res.status(200).send('Application added successfully');
+    });
+  });
+
+
+// Endpoint to get the count of interviews
 app.get('/reminder', (req, res) => {
     const sql = "SELECT * FROM reminder";
     db.query(sql, (err, data) => {
@@ -121,10 +158,6 @@ app.get('/jobapplication', (req, res) => {
         res.send(html);
     });
 });
-
-
-
-
 
 // Endpoint to delete a job application
 app.delete('/jobapplication/:id', (req, res) => {
@@ -269,9 +302,6 @@ app.post('/profile', (req, res) => {
         return res.status(200).json({ message: 'Profile data saved successfully' });
     });
 });
-
-
-
 
 app.listen(8081, () => {
     console.log("Listening on port 8081");

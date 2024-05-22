@@ -22,7 +22,7 @@
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="#">Home</a>
+            <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -52,9 +52,11 @@
   <div style="margin-top: 40px"></div>
   <div class="container" style="text-align: center;">
     <div class="tab">
-      <button class="tablinks btn btn-danger" onclick="openCity(event, 'Application')">Application</button>
-      <button class="tablinks btn btn-success" onclick="openCity(event, 'Interview')">Interview</button>
+      <button class="tablinks btn btn-warning" onclick="window.location.href='add_application.html'">Add Application</button>
       <button class="tablinks btn btn-primary" onclick="window.location.href='view_applications.html'">View Applications</button>
+      <button class="tablinks btn btn-danger" onclick="openCity(event, 'Application')">Application Count</button>
+      <button class="tablinks btn btn-success" onclick="openCity(event, 'Interview')">Interview Count</button>
+      
     </div>
     
     <div id="Application" class="tabcontent" style="display: none; background-color: #fff; border-radius: 10px;">
@@ -73,6 +75,8 @@
       </div>
     </div>
   </div>
+
+  
 
 <script>
 function openCity(evt, job) {
