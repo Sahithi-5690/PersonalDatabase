@@ -29,26 +29,20 @@ app.get('/', (req, res) => {
 // Route for handling form submission
 app.post('/job_applications', (req, res) => {
     const {
-      jobTitle, jobDescription, contactInfo, salaryRange, experience,
-      company, dateApplied, jobType, resume, coverLetter, status,
-      interviewDate, interviewer, feedback, offerStatus, acceptanceStatus,
-      startDate, location
+      jobTitle, jobDescription, salaryRange,
+      company, dateApplied, status
     } = req.body;
   
     const sql = `
       INSERT INTO jobapplication (
-        jobTitle, jobDescription, contactInfo, salaryRange, experience,
-        company, dateApplied, jobType, resume, coverLetter, status,
-        interviewDate, interviewer, feedback, offerStatus, acceptanceStatus,
-        startDate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        jobTitle, jobDescription, salaryRange,
+        company, dateApplied, status
+      ) VALUES (?, ?, ?, ?, ?, ?)
     `;
   
     const values = [
-      jobTitle, jobDescription, contactInfo, salaryRange, experience,
-      company, dateApplied, jobType, resume, coverLetter, status,
-      interviewDate, interviewer, feedback, offerStatus, acceptanceStatus,
-      startDate
+        jobTitle, jobDescription, salaryRange,
+        company, dateApplied, status
     ];
   
     // Use db instead of connection
@@ -122,7 +116,7 @@ app.get('/jobapplication', (req, res) => {
 
         // Convert data to HTML table with edit and delete buttons
         let html = '<table>';
-        html += '<thead><tr><th>SNO</th><th>Job Title</th><th>Job Description</th><th>Contact Info</th><th>Salary Range</th><th>Experience</th><th>Company</th><th>Date Applied</th><th>Job Type</th><th>Resume</th><th>Cover Letter</th><th>Status</th><th>Interview Date</th><th>Interviewer</th><th>Feedback</th><th>Offer Status</th><th>Acceptance Status</th><th>Start Date</th><th>Actions</th></tr></thead>';
+        html += '<thead><tr><th>SNO</th><th>Job Title</th><th>Job Description</th><th>Salary Range</th><th>Company</th><th>Date Applied</th><th>Status</th><th>Actions</th></tr></thead>';
         html += '<tbody>';
 
         data.forEach(row => {
@@ -131,21 +125,21 @@ app.get('/jobapplication', (req, res) => {
            // html += '<td>' + row.jobApplicationId + '</td>';
             html += '<td>' + row.jobTitle + '</td>';
             html += '<td>' + row.jobDescription + '</td>';
-            html += '<td>' + row.contactInfo + '</td>';
+          //  html += '<td>' + row.contactInfo + '</td>';
             html += '<td>' + row.salaryRange + '</td>';
-            html += '<td>' + row.experience + '</td>';
+           // html += '<td>' + row.experience + '</td>';
             html += '<td>' + row.company + '</td>';
             html += '<td>' + row.dateApplied + '</td>';
-            html += '<td>' + row.jobType + '</td>';
-            html += '<td>' + row.resume + '</td>';
-            html += '<td>' + row.coverLetter + '</td>';
+           // html += '<td>' + row.jobType + '</td>';
+           // html += '<td>' + row.resume + '</td>';
+           //html += '<td>' + row.coverLetter + '</td>';
             html += '<td>' + row.status + '</td>';
-            html += '<td>' + row.interviewDate + '</td>';
-            html += '<td>' + row.interviewer + '</td>';
-            html += '<td>' + row.feedback + '</td>';
-            html += '<td>' + row.offerStatus + '</td>';
-            html += '<td>' + row.acceptanceStatus + '</td>';
-            html += '<td>' + row.startDate + '</td>';
+          //  html += '<td>' + row.interviewDate + '</td>';
+           // html += '<td>' + row.interviewer + '</td>';
+           // html += '<td>' + row.feedback + '</td>';
+           // html += '<td>' + row.offerStatus + '</td>';
+           // html += '<td>' + row.acceptanceStatus + '</td>';
+           // html += '<td>' + row.startDate + '</td>';
             html += '<td class="btn-container">';
             html += '<button class="btn btn-primary" onclick="editApplication(' + row.jobApplicationId + ')">Edit</button>';
             html += '<button class="btn btn-danger" onclick="deleteApplication(' + row.jobApplicationId + ')">Delete</button>';
@@ -214,42 +208,20 @@ app.put('/jobapplication/:id', (req, res) => {
         UPDATE JobApplication 
         SET 
             jobTitle = ?, 
-            jobDescription = ?, 
-            contactInfo = ?, 
-            salaryRange = ?, 
-            experience = ?, 
-            company = ?, 
-            dateApplied = ?, 
-            jobType = ?, 
-            resume = ?, 
-            coverLetter = ?, 
+            jobDescription = ?,  
+            salaryRange = ?,  
+            company = ?,  
+            dateApplied = ?,
             status = ?, 
-            interviewDate = ?, 
-            interviewer = ?, 
-            feedback = ?, 
-            offerStatus = ?, 
-            acceptanceStatus = ?, 
-            startDate = ? 
         WHERE jobApplicationId = ?`;
 
     const values = [
         applicationData.jobTitle, 
         applicationData.jobDescription, 
-        applicationData.contactInfo, 
         applicationData.salaryRange, 
-        applicationData.experience, 
         applicationData.company, 
         applicationData.dateApplied, 
-        applicationData.jobType, 
-        applicationData.resume, 
-        applicationData.coverLetter, 
         applicationData.status, 
-        applicationData.interviewDate, 
-        applicationData.interviewer, 
-        applicationData.feedback, 
-        applicationData.offerStatus, 
-        applicationData.acceptanceStatus, 
-        applicationData.startDate, 
         id
     ];
 
