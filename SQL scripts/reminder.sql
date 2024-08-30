@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 21, 2024 at 05:15 PM
+-- Generation Time: Aug 30, 2024 at 07:21 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -40,7 +40,6 @@ CREATE TABLE `reminder` (
 --
 
 INSERT INTO `reminder` (`reminderId`, `applicationId`, `reminderDate`, `reminderType`, `reminderNotes`) VALUES
-(3, 2, '2024-05-06', 'Follow-up', 'Follow up on job application status'),
 (4, 3, '2024-05-08', 'Follow-up', 'Follow up on job application status'),
 (5, 4, '2024-05-20', 'Follow-up', 'Follow up on job application status'),
 (6, 5, '2024-05-12', 'Follow-up', 'Follow up on job application status'),

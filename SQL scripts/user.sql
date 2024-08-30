@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 21, 2024 at 07:16 AM
+-- Generation Time: Aug 30, 2024 at 07:21 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -24,10 +24,10 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `user`
+-- Table structure for table `userprofile`
 --
 
-CREATE TABLE `user` (
+CREATE TABLE `userprofile` (
   `userId` int(11) NOT NULL,
   `firstName` varchar(255) DEFAULT NULL,
   `lastName` varchar(255) DEFAULT NULL,
@@ -48,20 +48,20 @@ CREATE TABLE `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `user`
+-- Dumping data for table `userprofile`
 --
 
-INSERT INTO `user` (`userId`, `firstName`, `lastName`, `password`, `email`, `aboutMe`, `phoneNumber`, `addressLine1`, `addressLine2`, `postcode`, `state`, `area`, `emailId`, `education`, `country`, `region`, `experience`) VALUES
-(1, 'Pinakapaani', 'Basina', NULL, 'basinapaani@gmail.com', NULL, '6605285458', '314', 'W 7th Street', '64468', 'Missouri', 'Maryville', NULL, 'Masters', 'United States', 'mo', NULL);
+INSERT INTO `userprofile` (`userId`, `firstName`, `lastName`, `password`, `email`, `aboutMe`, `phoneNumber`, `addressLine1`, `addressLine2`, `postcode`, `state`, `area`, `emailId`, `education`, `country`, `region`, `experience`) VALUES
+(1, 'Pinakapaani', 'Basina', '12345678', 'basinapaani@gmail.com', 'None', '6605285458', '314', 'w 7th Street', '64468', 'Missouri', 'Maryville', NULL, 'Masters', 'United States', 'MO', '2');
 
 --
 -- Indexes for dumped tables
 --
 
 --
--- Indexes for table `user`
+-- Indexes for table `userprofile`
 --
-ALTER TABLE `user`
+ALTER TABLE `userprofile`
   ADD PRIMARY KEY (`userId`);
 
 --
@@ -69,9 +69,9 @@ ALTER TABLE `user`
 --
 
 --
--- AUTO_INCREMENT for table `user`
+-- AUTO_INCREMENT for table `userprofile`
 --
-ALTER TABLE `user`
+ALTER TABLE `userprofile`
   MODIFY `userId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 COMMIT;
 
