@@ -26,7 +26,7 @@
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Items List
+              Category List
             </a>
             <ul class="dropdown-menu" id="dropdown-menu">
               <li><a class="dropdown-item" href="job_application.html">Job Application</a></li>
@@ -44,20 +44,20 @@
   </nav>
   <div class="container" style="padding-top: 4%;">
     <h1 class="dashboard__title">Welcome to Dashboard</h1>
-    <button type="button" class="btn btn-primary" id="add-table-btn">+ Add New Table</button>
+    <button type="button" class="btn btn-primary" id="add-table-btn">+ Add New Category</button>
   </div>
   <!-- Modal for creating a new table -->
   <div class="modal fade" id="createTableModal" tabindex="-1" aria-labelledby="createTableModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="createTableModalLabel">Create New Table</h5>
+          <h5 class="modal-title" id="createTableModalLabel">Create New Category</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <form id="create-table-form">
             <div class="mb-3">
-              <label for="table-name" class="form-label">Table Name:</label>
+              <label for="table-name" class="form-label">Category Name:</label>
               <input type="text" class="form-control" id="table-name" name="table-name" required>
             </div>
             <div id="attributes-container">
@@ -79,7 +79,7 @@
               </div>
             </div>
             <button type="button" class="btn btn-secondary" id="add-attribute">+ Add Attribute</button>
-            <button type="submit" class="btn btn-primary">Create Table</button>
+            <button type="submit" class="btn btn-primary">Create Category</button>
           </form>
         </div>
       </div>
