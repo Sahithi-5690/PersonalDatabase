@@ -101,6 +101,7 @@ app.post('/create-table', [
 app.delete('/delete-table/:tableName', (req, res) => {
     const { tableName } = req.params;
 
+    
     db.query(`DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`, (error) => {
         if (error) {
             console.error('Error deleting table:', error);
