@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Application</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="./homepage.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html">Personal DB</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Add Job Application
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="job_application.html">Job Application</a></li>
+              <li><a class="dropdown-item" href="profile_display.html">Profile</a></li>
+              <li><a class="dropdown-item" href="travel.html">Travel History</a></li>
+              <li><a class="dropdown-item" href="music.html">Music</a></li>
+              <li><a class="dropdown-item" href="movies.html">Movies</a></li>
+            </ul>
+          </li>
+        </ul>
+        <ul>
+          <button type="button" class="btn btn-outline-danger" id="logout" style="margin-left: 65%; margin-top: 1%;">Logout</button>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <div class="container">
+    <h2 style="text-align: center; margin-bottom: 20px;">Add Application</h2>
+    <form id="addApplicationForm">
+        <div class="mb-3">
+            <label for="jobTitle" class="form-label">Job Title</label>
+            <input type="text" class="form-control" id="jobTitle" name="jobTitle" placeholder="Enter job title">
+        </div>
+        <div class="mb-3">
+            <label for="jobDescription" class="form-label">Job Description</label>
+            <textarea class="form-control" id="jobDescription" name="jobDescription" rows="3" placeholder="Enter job description" required></textarea>
+        </div>
+        <!-- <div class="mb-3">
+            <label for="contactInfo" class="form-label">Contact Info</label>
+            <input type="text" class="form-control" id="contactInfo" name="contactInfo" placeholder="Enter contact info" required>
+        </div> -->
+        <div class="mb-3">
+            <label for="salaryRange" class="form-label">Salary Range</label>
+            <input type="text" class="form-control" id="salaryRange" name="salaryRange" placeholder="Enter salary range">
+        </div>
+        <!-- <div class="mb-3">
+            <label for="experience" class="form-label">Experience</label>
+            <input type="text" class="form-control" id="experience" name="experience" placeholder="Enter experience">
+        </div> -->
+        <div class="mb-3">
+            <label for="company" class="form-label">Company</label>
+            <input type="text" class="form-control" id="company" name="company" placeholder="Enter company name">
+        </div>
+        <div class="mb-3">
+            <label for="dateApplied" class="form-label">Date Applied</label>
+            <input type="date" class="form-control" id="dateApplied" name="dateApplied">
+        </div>
+        <!-- <div class="mb-3">
+            <label for="jobType" class="form-label">Job Type</label>
+            <input type="text" class="form-control" id="jobType" name="jobType" placeholder="Enter job type">
+        </div>
+        <div class="mb-3">
+            <label for="resume" class="form-label">Resume</label>
+            <input type="text" class="form-control" id="resume" name="resume" placeholder="Enter resume link">
+        </div>
+        <div class="mb-3">
+            <label for="coverLetter" class="form-label">Cover Letter</label>
+            <textarea class="form-control" id="coverLetter" name="coverLetter" rows="3" placeholder="Enter cover letter text"></textarea>
+        </div> -->
+        <div class="mb-3">
+            <label for="status" class="form-label">Status</label>
+            <input type="text" class="form-control" id="status" name="status" placeholder="Enter application status">
+        </div>
+        <!-- <div class="mb-3">
+            <label for="interviewDate" class="form-label">Interview Date</label>
+            <input type="date" class="form-control" id="interviewDate" name="interviewDate">
+        </div>
+        <div class="mb-3">
+            <label for="interviewer" class="form-label">Interviewer</label>
+            <input type="text" class="form-control" id="interviewer" name="interviewer" placeholder="Enter interviewer name">
+        </div>
+        <div class="mb-3">
+            <label for="feedback" class="form-label">Feedback</label>
+            <textarea class="form-control" id="feedback" name="feedback" rows="3" placeholder="Enter interview feedback"></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="offerStatus" class="form-label">Offer Status</label>
+            <input type="text" class="form-control" id="offerStatus" name="offerStatus" placeholder="Enter offer status">
+        </div>
+        <div class="mb-3"> -->
+            <!-- <label for="acceptanceStatus" class="form-label">Acceptance Status</label>
+            <input type="text" class="form-control" id="acceptanceStatus" name="acceptanceStatus" placeholder="Enter acceptance status">
+        </div> -->
+        <div class="mb-3">
+            <label for="startDate" class="form-label">Start Date</label>
+            <input type="date" class="form-control" id="startDate" name="startDate">
+        </div>
+        <!-- <div class="mb-3">
+            <label for="location" class="form-label">Location</label>
+            <input type="text" class="form-control" id="location" name="location" placeholder="Enter job location">
+        </div> -->
+        <button type="submit" class="btn btn-primary">Add Application</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('addApplicationForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+      const form = document.getElementById('addApplicationForm');
+      const formData = new FormData(form);
+      const jsonData = {};
+      formData.forEach((value, key) => {
+        jsonData[key] = value;
+      });
+      
+      try {
+        const response = await fetch('http://localhost:8081/job_applications', { // Correct port
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(jsonData),
+        });
+
+        if (response.ok) {
+          alert('Application added successfully!');
+          form.reset();
+          window.location.href = 'http://127.0.0.1:5501/PersonalDB/job_application.html';
+        } else {
+          alert('Failed to add application');
+        
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    });
+
+  </script>
+</body>
+</html>

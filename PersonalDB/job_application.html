@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Application</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style2.css">
+  <script type="module" src="./homepage.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html">Personal DB</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Job Application
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="profile_display.html">Profile</a></li>
+              <li><a class="dropdown-item" href="travel.html">Travel History</a></li>
+              <li><a class="dropdown-item" href="music.html">Music</a></li>
+              <li><a class="dropdown-item" href="movies.html">Movies</a></li>
+            </ul>
+          </li>
+        </ul>
+        <ul>
+          <button type="button" class="btn btn-outline-danger" id="logout" style="margin-left: 65%; margin-top: 1%;">Logout</button>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <div class="container">
+    <h2 style="text-align: center; margin-bottom: 20px; margin-top: 20px;">Job Tracker</h2>
+  </div>
+
+  <div class="container" style="text-align: center;">
+    <img src="Image.png" style="text-align: center;" alt="Job Tracking">
+  </div>
+  <div style="margin-top: 40px"></div>
+  <div class="container" style="text-align: center;">
+    <div class="tab">
+      <button class="tablinks btn btn-warning" onclick="window.location.href='add_application.html'">Add Application</button>
+      <button class="tablinks btn btn-primary" onclick="window.location.href='view_applications.html'">View Applications</button>
+      <button class="tablinks btn btn-danger" onclick="openCity(event, 'Application')">Application Count</button>
+      <button class="tablinks btn btn-success" onclick="openCity(event, 'Interview')">Interview Count</button>
+      
+    </div>
+    
+    <div id="Application" class="tabcontent" style="display: none; background-color: #fff; border-radius: 10px;">
+      <h3>Application</h3>
+      <div style="display: inline-block;">
+        <p style="background-color: darkseagreen; border-radius: 7px;">Total Number of Applications applied:</p>
+        <p id="totalApplications" style="background-color: indianred; border-radius: 7px;">Loading...</p>
+      </div>
+    </div>
+    
+    <div id="Interview" class="tabcontent" style="display: none; background-color: #fff; border-radius: 10px;">
+      <h3>Interview</h3>
+      <div style="display: inline-block;">
+        <p style="background-color: darkseagreen; border-radius: 7px;">Total Number of interviews scheduled</p>
+        <p id="totalInterviews" style="background-color: indianred; border-radius: 7px;">Loading...</p> 
+      </div>
+    </div>
+  </div>
+
+  
+
+<script>
+function openCity(evt, job) {
+  var i, tabcontent, tablinks;
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+  document.getElementById(job).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  fetchTotalApplications();
+  fetchTotalInterviews();
+});
+
+function fetchTotalApplications() {
+  fetch('http://localhost:8081/jobapplication/count')
+    .then(response => response.json())
+    .then(data => {
+      const totalApplicationsElement = document.getElementById('totalApplications');
+      totalApplicationsElement.textContent = data.totalApplications;
+    })
+    .catch(error => {
+      console.error('Error fetching total applications:', error);
+      const totalApplicationsElement = document.getElementById('totalApplications');
+      totalApplicationsElement.textContent = 'Error loading data';
+    });
+}
+
+function fetchTotalInterviews() {
+  fetch('http://localhost:8081/reminder/interview/count')
+    .then(response => response.json())
+    .then(data => {
+      const totalInterviewsElement = document.getElementById('totalInterviews');
+      totalInterviewsElement.textContent = data.totalInterviews;
+    })
+    .catch(error => {
+      console.error('Error fetching total interviews:', error);
+      const totalInterviewsElement = document.getElementById('totalInterviews');
+      totalInterviewsElement.textContent = 'Error loading data';
+    });
+}
+</script>
+</body>
+</html>
