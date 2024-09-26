@@ -23,12 +23,54 @@ db.connect(err => {
     console.log('Connected to database.');
 });
 
+// Create 'user' table if it doesn't exist
+const createUserTable = () => {
+    const query = `
+    CREATE TABLE IF NOT EXISTS user (
+        userId VARCHAR(255) PRIMARY KEY,
+        firstName VARCHAR(255) NOT NULL,
+        lastName VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE
+    )`;
+    
+    db.query(query, (err) => {
+        if (err) {
+            console.error('Error creating user table:', err);
+        } else {
+            console.log('User table ensured.');
+        }
+    });
+};
+
+// Ensure 'user_tables' exists for tracking user-created tables
+const createUserTablesTable = () => {
+    const query = `
+    CREATE TABLE IF NOT EXISTS user_tables (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId VARCHAR(255) NOT NULL,
+        tableName VARCHAR(255) NOT NULL,
+        FOREIGN KEY (userId) REFERENCES user(userId)
+    )`;
+
+    db.query(query, (err) => {
+        if (err) {
+            console.error('Error creating user_tables table:', err);
+        } else {
+            console.log('User_tables table ensured.');
+        }
+    });
+};
+
+// Ensure necessary tables are created on startup
+createUserTable();
+createUserTablesTable();
+
 // Test endpoint
 app.get('/', (req, res) => {
     res.json("From Backend");
 });
 
-// Endpoint to get table names
+// Endpoint to get table names for a user
 app.get('/tables', [
     check('userId').notEmpty().withMessage('UserId is required')
 ], (req, res) => {
@@ -50,7 +92,7 @@ app.get('/tables', [
     });
 });
 
-// Endpoint to create a new table
+// Endpoint to create a new table for a user
 app.post('/create-table', [
     check('tableName').notEmpty().withMessage('Table name is required'),
     check('attributes').isArray().withMessage('Attributes must be an array'),
@@ -70,7 +112,7 @@ app.post('/create-table', [
             return res.status(400).json({ error: 'User not found' });
         }
 
-        // Dynamically generate SQL query
+        // Dynamically generate SQL query for creating a new table
         let query = `CREATE TABLE ${mysql.escapeId(tableName)} (id INT AUTO_INCREMENT PRIMARY KEY, `;
         attributes.forEach(attr => {
             query += `${mysql.escapeId(attr.name)} ${attr.type}, `;
@@ -85,7 +127,7 @@ app.post('/create-table', [
                 return res.status(500).send('Error creating table');
             }
 
-            // Insert into metadata table
+            // Insert table metadata into user_tables
             db.query('INSERT INTO user_tables (userId, tableName) VALUES (?, ?)', [userId, tableName], (err) => {
                 if (err) {
                     console.error('Error linking table to user:', err);
@@ -107,7 +149,7 @@ app.delete('/delete-table/:tableName', (req, res) => {
             return res.status(500).send('Error deleting table');
         }
 
-        // Also remove the table link from user_tables
+        // Remove the table link from user_tables
         db.query('DELETE FROM user_tables WHERE tableName = ?', [tableName], (err) => {
             if (err) {
                 console.error('Error unlinking table from user:', err);
@@ -160,10 +202,7 @@ app.post('/add-user', [
 
 // Endpoint to handle logout
 app.post('/logout', (req, res) => {
-    // Assuming you're handling session or token-based authentication,
-    // invalidate the session or token here
     // Example: req.session.destroy() or token invalidation logic
-
     res.send('Logged out successfully');
 });
 
