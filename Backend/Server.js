@@ -112,28 +112,39 @@ app.post('/create-table', [
             return res.status(400).json({ error: 'User not found' });
         }
 
-        // Dynamically generate SQL query for creating a new table
-        let query = `CREATE TABLE ${mysql.escapeId(tableName)} (id INT AUTO_INCREMENT PRIMARY KEY, `;
-        attributes.forEach(attr => {
-            query += `${mysql.escapeId(attr.name)} ${attr.type}, `;
-        });
-        query = query.slice(0, -2); // Remove trailing comma and space
-        query += ')';
-
-        // Create the table
-        db.query(query, (error) => {
+        // Check if the table already exists
+        db.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
             if (error) {
-                console.error('Error creating table:', error);
-                return res.status(500).send('Error creating table');
+                console.error('Error checking table existence:', error);
+                return res.status(500).json({ error: 'Error checking table existence' });
+            }
+            if (results.length > 0) {
+                return res.status(400).json({ error: 'Table already exists' });
             }
 
-            // Insert table metadata into user_tables
-            db.query('INSERT INTO user_tables (userId, tableName) VALUES (?, ?)', [userId, tableName], (err) => {
-                if (err) {
-                    console.error('Error linking table to user:', err);
-                    return res.status(500).send('Error linking table to user');
+            // Dynamically generate SQL query for creating a new table
+            let query = `CREATE TABLE ${mysql.escapeId(tableName)} (id INT AUTO_INCREMENT PRIMARY KEY, `;
+            attributes.forEach(attr => {
+                query += `${mysql.escapeId(attr.name)} ${attr.type}, `;
+            });
+            query = query.slice(0, -2); // Remove trailing comma and space
+            query += ')';
+
+            // Create the table
+            db.query(query, (error) => {
+                if (error) {
+                    console.error('Error creating table:', error);
+                    return res.status(500).json({ error: 'Error creating table' }); // Return JSON
                 }
-                res.send('Table created and linked successfully');
+
+                // Insert table metadata into user_tables
+                db.query('INSERT INTO user_tables (userId, tableName) VALUES (?, ?)', [userId, tableName], (err) => {
+                    if (err) {
+                        console.error('Error linking table to user:', err);
+                        return res.status(500).json({ error: 'Error linking table to user' }); // Return JSON
+                    }
+                    res.status(200).json({ message: 'Table created and linked successfully' }); // Return JSON
+                });
             });
         });
     });
@@ -146,16 +157,16 @@ app.delete('/delete-table/:tableName', (req, res) => {
     db.query(`DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`, (error) => {
         if (error) {
             console.error('Error deleting table:', error);
-            return res.status(500).send('Error deleting table');
+            return res.status(500).json({ error: 'Error deleting table' }); // Return JSON
         }
 
         // Remove the table link from user_tables
         db.query('DELETE FROM user_tables WHERE tableName = ?', [tableName], (err) => {
             if (err) {
                 console.error('Error unlinking table from user:', err);
-                return res.status(500).send('Error unlinking table from user');
+                return res.status(500).json({ error: 'Error unlinking table from user' }); // Return JSON
             }
-            res.send('Table deleted successfully');
+            res.status(200).json({ message: 'Table deleted successfully' }); // Return JSON
         });
     });
 });
@@ -169,7 +180,7 @@ app.get('/table/:name', (req, res) => {
     db.query(sql, [tableName], (err, results) => {
         if (err) {
             console.error('Error fetching table data:', err);
-            return res.status(500).json({ error: 'Error fetching table data' });
+            return res.status(500).json({ error: 'Error fetching table data' }); // Return JSON
         }
         res.json(results);
     });
@@ -194,16 +205,16 @@ app.post('/add-user', [
     db.query(sql, [userId, firstName, lastName, email], (err) => {
         if (err) {
             console.error('Error inserting user into database:', err);
-            return res.status(500).json({ error: 'Failed to insert user into database' });
+            return res.status(500).json({ error: 'Failed to insert user into database' }); // Return JSON
         }
-        res.status(200).json({ message: 'User added successfully' });
+        res.status(200).json({ message: 'User added successfully' }); // Return JSON
     });
 });
 
 // Endpoint to handle logout
 app.post('/logout', (req, res) => {
     // Example: req.session.destroy() or token invalidation logic
-    res.send('Logged out successfully');
+    res.json({ message: 'Logged out successfully' }); // Return JSON
 });
 
 // Server listening on port 8081

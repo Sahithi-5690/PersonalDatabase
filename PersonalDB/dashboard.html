@@ -1,192 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'>
-  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" defer></script>
-  <script type="module" src="./homepage.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" defer></script>
 </head>
+
 <body>
-  <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="dashboard.html">Personal DB</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
-          </li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Category List
-            </a>
-            <ul class="dropdown-menu" id="dropdown-menu">
-              <!-- Dropdown items will be populated here -->
-            </ul>
-          </li>
-        </ul>
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item">
-            <button type="button" class="btn btn-outline-danger" id="logout" style="margin-top: 8px;">Logout</button>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </nav>
-  <div class="container" style="padding-top: 4%;">
-    <h1 class="dashboard__title">Welcome to Dashboard</h1>
-    <button type="button" class="btn btn-primary" id="add-table-btn">+ Add New Category</button>
-  </div>
-  <!-- Modal for creating a new table -->
-  <div class="modal fade" id="createTableModal" tabindex="-1" aria-labelledby="createTableModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="createTableModalLabel">Create New Category</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="create-table-form">
-            <div class="mb-3">
-              <label for="table-name" class="form-label">Category Name:</label>
-              <input type="text" class="form-control" id="table-name" name="table-name" required>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.html">Personal DB</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Category List
+                        </a>
+                        <ul class="dropdown-menu" id="dropdown-menu">
+                            <!-- Dropdown items will be populated here -->
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-outline-danger" id="logout" style="margin-top: 8px;">Logout</button>
+                    </li>
+                </ul>
             </div>
-            <div id="attributes-container">
-              <div class="mb-3 attribute">
-                <label for="attribute-name-1" class="form-label">Attribute Name:</label>
-                <input type="text" class="form-control" name="attribute-name-1" required>
-                <label for="attribute-type-1" class="form-label">Attribute Type:</label>
-                <select class="form-select" name="attribute-type-1" required>
-                  <option value="">Select Data Type</option>
-                  <option value="INT">INT</option>
-                  <option value="VARCHAR(255)">VARCHAR(255)</option>
-                  <option value="TEXT">TEXT</option>
-                  <option value="DATE">DATE</option>
-                  <option value="FLOAT">FLOAT</option>
-                  <option value="DOUBLE">DOUBLE</option>
-                  <option value="BOOLEAN">BOOLEAN</option>
-                  <option value="DATETIME">DATETIME</option>
-                </select>
-              </div>
-            </div>
-            <button type="button" class="btn btn-secondary" id="add-attribute">+ Add Attribute</button>
-            <button type="submit" class="btn btn-primary">Create Category</button>
-          </form>
         </div>
-      </div>
+    </nav>
+
+    <div class="container" style="padding-top: 4%;">
+        <h1 class="dashboard__title">Welcome to Dashboard</h1>
+        <button type="button" class="btn btn-primary" id="add-table-btn" data-bs-toggle="modal" data-bs-target="#createTableModal">+ Add New Category</button>
     </div>
-  </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Retrieve userId from local storage
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        console.error('User Id not Found in Local storage');
-        window.location.href = 'index.html'; // Redirect to login page
-        return;
-      }
+    <!-- Modal for creating a new table -->
+    <div class="modal fade" id="createTableModal" tabindex="-1" aria-labelledby="createTableModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createTableModalLabel">Create New Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-table-form">
+                        <div class="mb-3">
+                            <label for="table-name" class="form-label">Category Name:</label>
+                            <input type="text" class="form-control" id="table-name" name="table-name" required>
+                        </div>
+                        <div id="attributes-container">
+                            <!-- Attributes will be appended here -->
+                        </div>
+                        <button type="button" class="btn btn-secondary" id="add-attribute">+ Add Attribute</button>
+                        <button type="submit" class="btn btn-primary">Create Category</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-      // Load user-specific table names into the dropdown menu
-      fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
-        .then(response => response.json())
-        .then(tables => {
-          if (Array.isArray(tables)) {
-            const dropdownMenu = document.getElementById('dropdown-menu');
-            tables.forEach(table => {
-              const li = document.createElement('li');
-              li.innerHTML = `<a class="dropdown-item" href="view_table.html?table=${table}">${table}</a>`;
-              dropdownMenu.appendChild(li);
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                console.error('User ID not found in local storage');
+                window.location.href = 'index.html'; // Redirect to login page
+                return;
+            }
+
+            // Load user-specific table names into the dropdown menu
+            fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
+                .then(response => response.json())
+                .then(tables => {
+                    if (Array.isArray(tables)) {
+                        const dropdownMenu = document.getElementById('dropdown-menu');
+                        dropdownMenu.innerHTML = ''; // Clear any existing dropdown items
+                        tables.forEach(table => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<a class="dropdown-item" href="view_table.html?table=${table}">${table}</a>`;
+                            dropdownMenu.appendChild(li);
+                        });
+                    } else {
+                        console.error('Expected an array of tables, but received:', tables);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching tables:', error);
+                });
+
+            let attributeCount = 0; // Start counting attributes from 0
+
+            // Function to create a new attribute input field
+            function createAttributeField() {
+                attributeCount++; // Increment the attribute count
+
+                const newAttribute = document.createElement('div');
+                newAttribute.classList.add('mb-3', 'attribute');
+                newAttribute.innerHTML = `
+                    <label for="attribute-name-${attributeCount}" class="form-label">Attribute Name:</label>
+                    <input type="text" class="form-control" id="attribute-name-${attributeCount}" name="attribute-name-${attributeCount}" required>
+                    <label for="attribute-type-${attributeCount}" class="form-label">Attribute Type:</label>
+                    <select class="form-select" id="attribute-type-${attributeCount}" name="attribute-type-${attributeCount}" required>
+                        <option value="">Select Data Type</option>
+                        <option value="INT">INT</option>
+                        <option value="VARCHAR(255)">VARCHAR(255)</option>
+                        <option value="TEXT">TEXT</option>
+                        <option value="DATE">DATE</option>
+                        <option value="FLOAT">FLOAT</option>
+                        <option value="DOUBLE">DOUBLE</option>
+                        <option value="BOOLEAN">BOOLEAN</option>
+                        <option value="DATETIME">DATETIME</option>
+                    </select>
+                    <button type="button" class="btn btn-danger mt-2 remove-attribute" data-attribute-id="${attributeCount}">Remove</button>
+                `;
+                document.getElementById('attributes-container').appendChild(newAttribute); // Append the new attribute to the container
+
+                // Attach the remove button functionality
+                newAttribute.querySelector('.remove-attribute').addEventListener('click', () => {
+                    newAttribute.remove(); // Remove the attribute field
+                    attributeCount--; // Decrement attribute count
+                });
+            }
+
+            // Attach the event listener for the "Add Attribute" button
+            document.getElementById('add-attribute').addEventListener('click', createAttributeField);
+
+            // Reset the form and container when modal is opened
+            const resetModal = () => {
+                document.getElementById('create-table-form').reset();
+                document.getElementById('attributes-container').innerHTML = '';
+                attributeCount = 0; // Reset attribute count
+            };
+
+            // Show modal to add new table
+            document.getElementById('add-table-btn').addEventListener('click', () => {
+                resetModal();
+                const myModal = new bootstrap.Modal(document.getElementById('createTableModal'));
+                myModal.show();
             });
-          } else {
-            console.error('Expected an array of tables, but received:', tables);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching tables:', error);
+
+            // Reset modal on close
+            document.getElementById('createTableModal').addEventListener('hidden.bs.modal', resetModal);
+
+            // Handle form submission for creating a new category
+            document.getElementById('create-table-form').addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevent the default form submission
+
+                const tableName = document.getElementById('table-name').value;
+                const attributes = [];
+
+                // Collect attribute data
+                for (let i = 1; i <= attributeCount; i++) {
+                    const attributeName = document.getElementById(`attribute-name-${i}`)?.value;
+                    const attributeType = document.getElementById(`attribute-type-${i}`)?.value;
+                    if (attributeName && attributeType) {
+                        attributes.push({ name: attributeName, type: attributeType });
+                    }
+                }
+
+                // Send request to create a new category
+                fetch(`http://127.0.0.1:8081/create-table`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId, tableName, attributes }),
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.error || 'Network response was not ok');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        alert(data.message || 'Category created successfully!');
+                        // Close modal after successful submission
+                        const myModal = bootstrap.Modal.getInstance(document.getElementById('createTableModal'));
+                        myModal.hide();
+                        // Reset the form
+                        resetModal();
+                    })
+                    .catch(error => {
+                        console.error('Error creating category:', error);
+                        alert(`An error occurred while creating the category: ${error.message}`);
+                    });
+            });
+
+            // Handle logout button click
+            document.getElementById('logout').addEventListener('click', () => {
+                localStorage.removeItem('userId'); // Clear user ID from localStorage
+                window.location.href = 'index.html'; // Redirect to login page
+            });
         });
-
-      // Show modal to add new table
-      document.getElementById('add-table-btn').addEventListener('click', () => {
-        const myModal = new bootstrap.Modal(document.getElementById('createTableModal'));
-        myModal.show();
-      });
-
-      // Add new attribute input fields
-      document.getElementById('add-attribute').addEventListener('click', () => {
-        const container = document.getElementById('attributes-container');
-        const count = container.getElementsByClassName('attribute').length + 1;
-
-        const newAttribute = document.createElement('div');
-        newAttribute.classList.add('mb-3', 'attribute');
-        newAttribute.innerHTML = `
-          <label for="attribute-name-${count}" class="form-label">Attribute Name:</label>
-          <input type="text" class="form-control" name="attribute-name-${count}" required>
-          <label for="attribute-type-${count}" class="form-label">Attribute Type:</label>
-          <select class="form-select" name="attribute-type-${count}" required>
-            <option value="">Select Data Type</option>
-            <option value="INT">INT</option>
-            <option value="VARCHAR(255)">VARCHAR(255)</option>
-            <option value="TEXT">TEXT</option>
-            <option value="DATE">DATE</option>
-            <option value="FLOAT">FLOAT</option>
-            <option value="DOUBLE">DOUBLE</option>
-            <option value="BOOLEAN">BOOLEAN</option>
-            <option value="DATETIME">DATETIME</option>
-          </select>
-        `;
-        container.appendChild(newAttribute);
-      });
-
-      // Handle form submission
-      document.getElementById('create-table-form').addEventListener('submit', event => {
-        event.preventDefault();
-
-        const form = event.target;
-        const tableName = form['table-name'].value;
-        const attributes = [];
-
-        for (let i = 1; i <= form.querySelectorAll('.attribute').length; i++) {
-          const name = form[`attribute-name-${i}`].value;
-          const type = form[`attribute-type-${i}`].value;
-          attributes.push({ name, type });
-        }
-
-        fetch('http://127.0.0.1:8081/create-table', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ tableName, attributes, userId })
-        })
-          .then(response => response.text())
-          .then(result => {
-            alert(result);
-            window.location.reload(); // Reload to update dropdown
-          })
-          .catch(error => {
-            console.error('Error:', error);
-          });
-      });
-
-      // Logout functionality
-      document.getElementById('logout').addEventListener('click', async () => {
-        try {
-          await fetch('http://127.0.0.1:8081/logout', { method: 'POST' });
-          localStorage.removeItem('userId');
-          window.location.href = 'index.html'; // Redirect to login page
-        } catch (error) {
-          console.error('Logout Error:', error);
-        }
-      });
-    });
-  </script>
+    </script>
 </body>
+
 </html>
