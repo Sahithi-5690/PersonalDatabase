@@ -1,7 +1,8 @@
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
-const { check, validationResult } = require('express-validator'); // For validation
+const { check, validationResult } = require('express-validator');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
@@ -9,12 +10,13 @@ app.use(express.json()); // Parses JSON request bodies
 
 // Database connection setup
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'personaldb'
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'personaldb'
 });
 
+// Connect to the database
 db.connect(err => {
     if (err) {
         console.error('Database connection failed: ' + err.stack);
@@ -32,7 +34,7 @@ const createUserTable = () => {
         lastName VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL UNIQUE
     )`;
-    
+
     db.query(query, (err) => {
         if (err) {
             console.error('Error creating user table:', err);
@@ -70,83 +72,117 @@ app.get('/', (req, res) => {
     res.json("From Backend");
 });
 
-// Endpoint to get table names for a user
-app.get('/tables', [
-    check('userId').notEmpty().withMessage('UserId is required')
-], (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
+// Middleware for centralized error handling
+const errorHandler = (err, req, res, next) => {
+    console.error(err);
+    res.status(err.status || 500).json({ success: false, error: err.message || 'Internal Server Error' });
+};
 
+// Use error handling middleware
+app.use(errorHandler);
+
+// Standardized response function
+const sendResponse = (res, status, message, data = null) => {
+    res.status(status).json({ success: status < 400, message, data });
+};
+
+// Endpoint to get table names for a user
+app.get('/tables', (req, res) => {
     const userId = req.query.userId;
+
+    if (!userId) {
+        return sendResponse(res, 400, 'UserId is required');
+    }
 
     // Fetch tables linked to the user
     db.query('SELECT tableName FROM user_tables WHERE userId = ?', [userId], (err, results) => {
         if (err) {
             console.error('Error fetching user tables:', err);
-            return res.status(500).json({ error: 'Error fetching user tables' });
+            return sendResponse(res, 500, 'Error fetching user tables');
         }
-        const tables = results.map(row => row.tableName);
-        res.json(tables);
+        const tables = results.map(row => row.tableName) || [];
+        sendResponse(res, 200, 'Tables fetched successfully', tables);
     });
 });
+
+// Middleware to check if user exists
+const checkUserExists = (req, res, next) => {
+    const userId = req.body.userId || req.query.userId;
+    db.query('SELECT * FROM user WHERE userId = ?', [userId], (error, results) => {
+        if (error || results.length === 0) {
+            console.error('User not found:', error);
+            return sendResponse(res, 400, 'User not found');
+        }
+        next();
+    });
+};
 
 // Endpoint to create a new table for a user
 app.post('/create-table', [
     check('tableName').notEmpty().withMessage('Table name is required'),
     check('attributes').isArray().withMessage('Attributes must be an array'),
-    check('userId').notEmpty().withMessage('UserId is required')
-], (req, res) => {
+    check('userId').notEmpty().withMessage('UserId is required'),
+    check('attributes.*.name').isString().withMessage('Attribute name must be a string'),
+    check('attributes.*.type').isString().withMessage('Attribute type must be a string'),
+], checkUserExists, (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return sendResponse(res, 400, 'Validation errors', errors.array());
     }
 
     const { tableName, attributes, userId } = req.body;
 
-    // Validate user
-    db.query('SELECT * FROM user WHERE userId = ?', [userId], (error, results) => {
-        if (error || results.length === 0) {
-            console.error('User not found:', error);
-            return res.status(400).json({ error: 'User not found' });
+    // Check if the table already exists
+    db.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
+        if (error) {
+            console.error('Error checking table existence:', error);
+            return sendResponse(res, 500, 'Error checking table existence');
+        }
+        if (results.length > 0) {
+            return sendResponse(res, 400, 'Table already exists');
         }
 
-        // Check if the table already exists
-        db.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
+        // Dynamically generate SQL query for creating a new table
+        let query = `CREATE TABLE ${mysql.escapeId(tableName)} (id INT AUTO_INCREMENT PRIMARY KEY, `;
+        attributes.forEach(attr => {
+            query += `${mysql.escapeId(attr.name)} ${attr.type}, `;
+        });
+        query = query.slice(0, -2); // Remove trailing comma and space
+        query += ')';
+
+        // Create the table
+        db.query(query, (error) => {
             if (error) {
-                console.error('Error checking table existence:', error);
-                return res.status(500).json({ error: 'Error checking table existence' });
-            }
-            if (results.length > 0) {
-                return res.status(400).json({ error: 'Table already exists' });
+                console.error('Error creating table:', error);
+                return sendResponse(res, 500, 'Error creating table');
             }
 
-            // Dynamically generate SQL query for creating a new table
-            let query = `CREATE TABLE ${mysql.escapeId(tableName)} (id INT AUTO_INCREMENT PRIMARY KEY, `;
-            attributes.forEach(attr => {
-                query += `${mysql.escapeId(attr.name)} ${attr.type}, `;
-            });
-            query = query.slice(0, -2); // Remove trailing comma and space
-            query += ')';
-
-            // Create the table
-            db.query(query, (error) => {
-                if (error) {
-                    console.error('Error creating table:', error);
-                    return res.status(500).json({ error: 'Error creating table' }); // Return JSON
+            // Insert table metadata into user_tables
+            db.query('INSERT INTO user_tables (userId, tableName) VALUES (?, ?)', [userId, tableName], (err) => {
+                if (err) {
+                    console.error('Error linking table to user:', err);
+                    return sendResponse(res, 500, 'Error linking table to user');
                 }
-
-                // Insert table metadata into user_tables
-                db.query('INSERT INTO user_tables (userId, tableName) VALUES (?, ?)', [userId, tableName], (err) => {
-                    if (err) {
-                        console.error('Error linking table to user:', err);
-                        return res.status(500).json({ error: 'Error linking table to user' }); // Return JSON
-                    }
-                    res.status(200).json({ message: 'Table created and linked successfully' }); // Return JSON
-                });
+                sendResponse(res, 200, 'Table created and linked successfully');
             });
         });
+    });
+});
+
+// Endpoint to get column names for a specific table
+app.get('/table/columns/:tableName', (req, res) => {
+    const tableName = req.params.tableName;
+
+    const sql = `SHOW COLUMNS FROM ??`;
+    db.query(sql, [tableName], (err, results) => {
+        if (err) {
+            console.error('Error fetching column names:', err);
+            return sendResponse(res, 500, 'Error fetching column names');
+        }
+
+        // Extract column names from the results
+        const columns = results.map(row => row.Field);
+        sendResponse(res, 200, 'Column names fetched successfully', columns);
     });
 });
 
@@ -154,70 +190,117 @@ app.post('/create-table', [
 app.delete('/delete-table/:tableName', (req, res) => {
     const { tableName } = req.params;
 
-    db.query(`DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`, (error) => {
+    // Check if the table exists before attempting to delete
+    db.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
         if (error) {
-            console.error('Error deleting table:', error);
-            return res.status(500).json({ error: 'Error deleting table' }); // Return JSON
+            console.error('Error checking table existence:', error);
+            return sendResponse(res, 500, 'Error checking table existence');
+        }
+        if (results.length === 0) {
+            return sendResponse(res, 404, 'Table not found');
         }
 
-        // Remove the table link from user_tables
-        db.query('DELETE FROM user_tables WHERE tableName = ?', [tableName], (err) => {
-            if (err) {
-                console.error('Error unlinking table from user:', err);
-                return res.status(500).json({ error: 'Error unlinking table from user' }); // Return JSON
+        db.query(`DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`, (error) => {
+            if (error) {
+                console.error('Error deleting table:', error);
+                return sendResponse(res, 500, 'Error deleting table');
             }
-            res.status(200).json({ message: 'Table deleted successfully' }); // Return JSON
+
+            // Remove the table link from user_tables
+            db.query('DELETE FROM user_tables WHERE tableName = ?', [tableName], (err) => {
+                if (err) {
+                    console.error('Error unlinking table from user:', err);
+                    return sendResponse(res, 500, 'Error unlinking table');
+                }
+                sendResponse(res, 200, 'Table deleted successfully');
+            });
         });
     });
 });
 
-// Endpoint to get data from any table
+// Endpoint to get all data from a table
 app.get('/table/:name', (req, res) => {
     const tableName = req.params.name;
 
-    // Query to select all data from the specified table
     const sql = 'SELECT * FROM ??';
     db.query(sql, [tableName], (err, results) => {
         if (err) {
             console.error('Error fetching table data:', err);
-            return res.status(500).json({ error: 'Error fetching table data' }); // Return JSON
+            return sendResponse(res, 500, 'Error fetching table data');
         }
-        res.json(results);
+        sendResponse(res, 200, 'Table data fetched successfully', results);
     });
 });
 
-// Endpoint to add a new user to the database
-app.post('/add-user', [
-    check('userId').notEmpty().withMessage('UserId is required'),
-    check('firstName').notEmpty().withMessage('First name is required'),
-    check('lastName').notEmpty().withMessage('Last name is required'),
-    check('email').isEmail().withMessage('Valid email is required')
-], (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+// Endpoint to get a single row from a table
+app.get('/table/:name/:id', (req, res) => {
+    const tableName = req.params.name;
+    const id = req.params.id;
+
+    const sql = `SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`;
+    db.query(sql, [id], (err, results) => {
+        if (err) {
+            console.error('Error fetching row data:', err);
+            return sendResponse(res, 500, 'Error fetching row data');
+        }
+        if (results.length === 0) {
+            return sendResponse(res, 404, 'Row not found');
+        }
+        sendResponse(res, 200, 'Row data fetched successfully', results[0]);
+    });
+});
+
+// Endpoint to add a new row to a table
+app.post('/table/:name', (req, res) => {
+    const tableName = req.params.name;
+    const data = req.body;
+
+    if (!data || Object.keys(data).length === 0) {
+        return sendResponse(res, 400, 'No data provided');
     }
 
-    const { userId, firstName, lastName, email } = req.body;
+    // Build the SQL query dynamically
+    const columns = Object.keys(data).map(col => mysql.escapeId(col)).join(', ');
+    const values = Object.values(data).map(val => mysql.escape(val)).join(', ');
 
-    const sql = `INSERT INTO user (userId, firstName, lastName, email) VALUES (?, ?, ?, ?)`;
+    const sql = `INSERT INTO ${mysql.escapeId(tableName)} (${columns}) VALUES (${values})`;
 
-    db.query(sql, [userId, firstName, lastName, email], (err) => {
+    db.query(sql, (err, result) => {
         if (err) {
-            console.error('Error inserting user into database:', err);
-            return res.status(500).json({ error: 'Failed to insert user into database' }); // Return JSON
+            console.error('Error inserting data into table:', err);
+            return sendResponse(res, 500, 'Error inserting data into table');
         }
-        res.status(200).json({ message: 'User added successfully' }); // Return JSON
+        sendResponse(res, 200, 'Row inserted successfully', { insertId: result.insertId });
     });
 });
 
-// Endpoint to handle logout
-app.post('/logout', (req, res) => {
-    // Example: req.session.destroy() or token invalidation logic
-    res.json({ message: 'Logged out successfully' }); // Return JSON
+// Endpoint to update a row in a table
+app.put('/table/:name/:id', (req, res) => {
+    const tableName = req.params.name;
+    const id = req.params.id;
+    const data = req.body;
+
+    if (!data || Object.keys(data).length === 0) {
+        return sendResponse(res, 400, 'No data provided');
+    }
+
+    const updates = Object.keys(data).map(col => `${mysql.escapeId(col)} = ${mysql.escape(data[col])}`).join(', ');
+
+    const sql = `UPDATE ${mysql.escapeId(tableName)} SET ${updates} WHERE id = ?`;
+    db.query(sql, [id], (err, result) => {
+        if (err) {
+            console.error('Error updating data in table:', err);
+            return sendResponse(res, 500, 'Error updating data in table');
+        }
+        if (result.affectedRows === 0) {
+            return sendResponse(res, 404, 'Row not found for update');
+        }
+        sendResponse(res, 200, 'Row updated successfully');
+    });
 });
 
-// Server listening on port 8081
-app.listen(8081, () => {
-    console.log("Listening on port 8081");
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
