@@ -237,7 +237,7 @@
                 document.querySelectorAll('.edit-row').forEach(button => {
                     button.addEventListener('click', () => {
                         const rowId = button.getAttribute('data-id');
-                        loadRowForEditing(rowId);
+                        loadDynamicFields(rowId); // Load dynamic fields for editing
                     });
                 });
 
@@ -249,92 +249,92 @@
                 });
             }
 
-            // Function to load dynamic input fields based on table structure and their data types
-            function loadDynamicFields() {
-                const dynamicFieldsDiv = document.getElementById('dynamic-fields');
-                dynamicFieldsDiv.innerHTML = ''; // Clear previous fields
+            function deleteRow(rowId, tableName) {
+    if (confirm('Are you sure you want to delete this row?')) {
+        fetch(`http://127.0.0.1:8081/delete-row/${tableName}/${rowId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            console.log('Row deleted:', result);
+            loadTableData(tableName); // Reload table data after deletion
+        })
+        .catch(error => {
+            console.error('Error deleting row:', error);
+        });
+    }
+}
 
-                // Fetch the column names and data types for creating input fields
-                fetch(`http://127.0.0.1:8081/table/columns/${encodeURIComponent(tableName)}`)
+
+            // Function to load dynamic fields for the modal
+            function loadDynamicFields(rowId = null) {
+                fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
                     .then(response => response.json())
-                    .then(columns => {
-                        console.log('Fetched columns:', columns); // Debugging line
-                        if (!columns.data || columns.data.length === 0) {
-                            console.error('No columns found for this table', columns);
-                            return;
-                        }
-                        columns.data.forEach(column => {
-                            if (column.name && column.name !== 'id') { // Skip the ID column
-                                const inputGroup = document.createElement('div');
-                                inputGroup.className = 'mb-3';
+                    .then(schema => {
+                        const dynamicFields = document.getElementById('dynamic-fields');
+                        dynamicFields.innerHTML = '';
 
-                                const label = document.createElement('label');
-                                label.className = 'form-label';
-                                label.textContent = column.name;
-
-                                const input = document.createElement('input');
-                                input.name = column.name; // Ensure the input name matches the expected database column
-                                input.className= 'form-control';
-                                input.required = true; // Make it a required field
-
-                                // Determine input type based on data type
-                                switch (column.data_type) {
-                                    case 'text':
-                                        input.type = 'text';
-                                        break;
-                                    case 'number':
-                                        input.type = 'number';
-                                        break;
-                                    case 'date':
-                                        input.type = 'date';
-                                        break;
-                                    default:
-                                        input.type = 'text';
-                                        break;
-                                }
-
-                                inputGroup.appendChild(label);
-                                inputGroup.appendChild(input);
-                                dynamicFieldsDiv.appendChild(inputGroup);
-                            }
+                        schema.data.forEach(field => {
+                            const fieldHTML = `
+                                <div class="mb-3">
+                                    <label for="${field.name}" class="form-label">${field.name}</label>
+                                    <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
+                                </div>
+                            `;
+                            dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
                         });
+
+                        if (rowId) {
+                            fetch(`http://127.0.0.1:8081/get-row/${rowId}`)
+                                .then(response => response.json())
+                                .then(row => {
+                                    for (const field in row.data) {
+                                        if (document.getElementById(field)) {
+                                            document.getElementById(field).value = row.data[field];
+                                        }
+                                    }
+                                    document.getElementById('row-id').value = rowId; // Set the ID for editing
+                                    document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
+                                });
+                        } else {
+                            document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
+                        }
                     })
-                    .catch(error => console.error('Error fetching columns:', error));
+                    .catch(error => console.error('Error loading schema:', error));
             }
 
-            // Handle form submission for adding/editing a row
+            // Form submit handler
             document.getElementById('row-form').addEventListener('submit', (event) => {
-                event.preventDefault(); // Prevent the default form submission
-
+                event.preventDefault();
                 const formData = new FormData(event.target);
-                const rowId = document.getElementById('row-id').value;
+                const rowId = formData.get('id');
+                const method = rowId ? 'PUT' : 'POST'; // Determine method based on presence of ID
+                const url = rowId ? `http://127.0.0.1:8081/update-row/${rowId}` : `http://127.0.0.1:8081/add-row/${encodeURIComponent(tableName)}`;
 
-                const rowData = Object.fromEntries(formData);
-                if (!rowId) {
-                    delete rowData.id; // Remove ID from data when adding a new row
-                }
+                fetch(url, {
+                    method: method,
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Row saved:', result);
+                    loadTableData(tableName); // Reload table data after saving
+                    document.getElementById('rowModal').modal('hide'); // Close the modal
+                })
+                .catch(error => {
+                    console.error('Error saving row:', error);
+                });
+            });
 
-                const fetchOptions = {
-                    method: rowId ? 'PUT' : 'POST', // Use PUT for editing, POST for adding
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(rowData), // This will not include id for new entries
-                };
-
-                const url = rowId ? `http://127.0.0.1:8081/update-row/${rowId}` : `http://127.0.0.1:8081/save-row/${encodeURIComponent(tableName)}`;
-
-                fetch(url, fetchOptions)
-                    .then(response => response.json())
-                    .then(result => {
-                        console.log('Row saved:', result);
-                        loadTableData(tableName); // Reload table data
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('rowModal'));
-                        modal.hide(); // Close the modal after saving
-                    })
-                    .catch(error => {
-                        console.error('Error saving row:', error);
-                    });
+            // Logout functionality
+            document.getElementById('logout').addEventListener('click', () => {
+                localStorage.removeItem('userId');
+                window.location.href = 'index.html';
             });
         });
     </script>
