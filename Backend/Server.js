@@ -188,6 +188,36 @@ app.get('/table/columns/:tableName', (req, res) => {
     });
 });
 
+// Endpoint to delete a row from a specific table
+app.delete('/delete-row/:tableName/:rowId', (req, res) => {
+    const tableName = req.params.tableName;
+    const rowId = req.params.rowId; // Assuming the row ID is passed as a URL parameter
+
+    // Check if the table exists
+    pool.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
+        if (error) {
+            console.error('Error checking table existence:', error);
+            return sendResponse(res, 500, 'Error checking table existence');
+        }
+        if (results.length === 0) {
+            return sendResponse(res, 404, 'Table not found');
+        }
+
+        // Prepare the delete query (assuming the primary key is named 'id')
+        const query = `DELETE FROM ${mysql.escapeId(tableName)} WHERE id = ?`;
+
+        pool.query(query, [rowId], (error) => {
+            if (error) {
+                console.error('Error deleting row:', error);
+                return sendResponse(res, 500, 'Error deleting row');
+            }
+
+            sendResponse(res, 200, 'Row deleted successfully');
+        });
+    });
+});
+
+
 // Endpoint to delete a table
 app.delete('/delete-table/:tableName', (req, res) => {
     const { tableName } = req.params;
