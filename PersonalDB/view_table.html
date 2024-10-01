@@ -14,6 +14,58 @@
         .hidden {
             display: none;
         }
+
+        .modal-content {
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background-color: #007bff;
+            color: white;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .modal-title {
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border: none;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .form-label {
+            font-weight: bold;
+        }
+
+        .form-control {
+            border-radius: 5px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            border-color: #007bff;
+        }
     </style>
 </head>
 
@@ -64,7 +116,7 @@
                 <div class="modal-body">
                     <form id="row-form">
                         <div id="dynamic-fields"></div> <!-- Dynamic fields will be added here -->
-                        <input type="hidden" id="row-id" name="id"> <!-- Hidden input for ID -->
+                        <input type="hidden" id="row-id" name="id"> <!-- Hidden input for ID (only used for editing) -->
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
                 </div>
@@ -80,23 +132,32 @@
                 window.location.href = 'index.html';
                 return;
             }
-
+    
             const params = new URLSearchParams(window.location.search);
             const tableName = params.get('table');
-
+    
             if (!tableName) {
                 document.getElementById('card-details').innerHTML = 'No table specified.';
                 return;
             }
-
+    
             document.getElementById('table-title').textContent = `${tableName} Category`;
-
+    
             // Load category list
             loadCategoryList(userId);
-
+    
             // Load table data
             loadTableData(tableName);
-
+    
+            // Add event listener for Add New Row button
+            document.getElementById('add-row-button').addEventListener('click', () => {
+                // Clear the hidden input for row id
+                document.getElementById('row-id').value = ''; // Clear the id for new rows
+    
+                // Load the dynamic fields for a new row
+                loadDynamicFields();
+            });
+    
             // Function to load category list
             function loadCategoryList(userId) {
                 fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
@@ -104,12 +165,12 @@
                     .then(tables => {
                         const dropdownMenu = document.getElementById('dropdown-menu');
                         dropdownMenu.innerHTML = '';
-
+    
                         if (!Array.isArray(tables.data)) {
                             console.error('Expected tables to be an array', tables);
                             return;
                         }
-
+    
                         tables.data.forEach(table => {
                             const listItem = document.createElement('li');
                             const linkItem = document.createElement('a');
@@ -122,14 +183,14 @@
                     })
                     .catch(error => console.error('Error loading categories:', error));
             }
-
+    
             // Function to load table data
             function loadTableData(tableName) {
-                fetch(`http://127.0.0.1:8081/table/${encodeURIComponent(tableName)}`)
+                fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`)
                     .then(response => response.json())
                     .then(data => {
                         console.log(data); // Log the data to see what you receive
-                        if (data.data.length === 0) {
+                        if (!data.data || data.data.length === 0) {
                             document.getElementById('card-details').innerHTML = 'No data found for this table.';
                             return;
                         }
@@ -140,7 +201,7 @@
                         document.getElementById('card-details').innerHTML = 'Error fetching table data: ' + error.message;
                     });
             }
-
+    
             // Function to render table data in a tabular form
             function renderTable(data) {
                 let tableHTML = `
@@ -154,7 +215,7 @@
                         </thead>
                         <tbody>
                 `;
-
+    
                 data.forEach(row => {
                     tableHTML += `
                         <tr>
@@ -167,132 +228,104 @@
                         </tr>
                     `;
                 });
-
+    
                 tableHTML += `
                         </tbody>
                     </table>
                 `;
-
+    
                 document.getElementById('card-details').innerHTML = tableHTML;
-
-                // Add event listeners for Edit/Delete buttons
+    
+                // Add event listeners for Edit and Delete buttons
                 document.querySelectorAll('.edit-row').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const rowId = button.getAttribute('data-id');
-                        loadRowForEditing(rowId);
+                    button.addEventListener('click', (e) => {
+                        const rowId = e.target.getAttribute('data-id');
+                        loadRowData(rowId);
                     });
                 });
-
+    
                 document.querySelectorAll('.delete-row').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const rowId = button.getAttribute('data-id');
-                        deleteRow(rowId, tableName);
+                    button.addEventListener('click', (e) => {
+                        const rowId = e.target.getAttribute('data-id');
+                        deleteRow(rowId);
                     });
                 });
             }
-
-            // Function to load dynamic input fields based on table structure
+    
+            // Load dynamic fields for new row
             function loadDynamicFields() {
-                const dynamicFieldsDiv = document.getElementById('dynamic-fields');
-                dynamicFieldsDiv.innerHTML = ''; // Clear previous fields
-
-                // Fetch the column names for creating input fields
-                fetch(`http://127.0.0.1:8081/table/columns/${encodeURIComponent(tableName)}`)
-                    .then(response => response.json())
-                    .then(columns => {
-                        columns.data.forEach(column => {
-                            if (column !== 'id') { // Exclude ID field
-                                const inputGroup = document.createElement('div');
-                                inputGroup.className = 'mb-3';
-                                inputGroup.innerHTML = `
-                                    <label for="${column}" class="form-label">${column.charAt(0).toUpperCase() + column.slice(1)}</label>
-                                    <input type="text" class="form-control" id="${column}" name="${column}" required>
-                                `;
-                                dynamicFieldsDiv.appendChild(inputGroup);
-                            }
-                        });
-                    })
-                    .catch(error => console.error('Error fetching column names:', error));
-            }
-
-            // Function to load a row for editing
-            function loadRowForEditing(rowId) {
-                fetch(`http://127.0.0.1:8081/row/${rowId}`)
-                    .then(response => response.json())
-                    .then(row => {
-                        const dynamicFieldsDiv = document.getElementById('dynamic-fields');
-                        dynamicFieldsDiv.innerHTML = ''; // Clear previous fields
-                        document.getElementById('row-id').value = row.id; // Set row ID
-
-                        Object.keys(row).forEach(key => {
-                            if (key !== 'id') { // Exclude ID field
-                                const inputGroup = document.createElement('div');
-                                inputGroup.className = 'mb-3';
-                                inputGroup.innerHTML = `
-                                    <label for="${key}" class="form-label">${key.charAt(0).toUpperCase() + key.slice(1)}</label>
-                                    <input type="text" class="form-control" id="${key}" name="${key}" value="${row[key]}" required>
-                                `;
-                                dynamicFieldsDiv.appendChild(inputGroup);
-                            }
-                        });
-
-                        // Change modal title
-                        document.getElementById('rowModalLabel').textContent = 'Edit Row';
-                    })
-                    .catch(error => console.error('Error fetching row data for editing:', error));
-            }
-
-            // Function to delete a row
-            function deleteRow(rowId, tableName) {
-                fetch(`http://127.0.0.1:8081/delete/${rowId}`, { method: 'DELETE' })
+                fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`)
                     .then(response => response.json())
                     .then(data => {
-                        console.log('Row deleted:', data);
-                        loadTableData(tableName); // Refresh the table
+                        const dynamicFieldsContainer = document.getElementById('dynamic-fields');
+                        dynamicFieldsContainer.innerHTML = '';
+    
+                        if (data.data.length > 0) {
+                            const keys = Object.keys(data.data[0]);
+                            keys.forEach(key => {
+                                if (key !== 'id') { // Exclude ID field
+                                    const formGroup = document.createElement('div');
+                                    formGroup.className = 'mb-3';
+                                    formGroup.innerHTML = `
+                                        <label for="${key}" class="form-label">${key}</label>
+                                        <input type="text" class="form-control" id="${key}" name="${key}" required>
+                                    `;
+                                    dynamicFieldsContainer.appendChild(formGroup);
+                                }
+                            });
+                        }
+                    })
+                    .catch(error => console.error('Error loading dynamic fields:', error));
+            }
+    
+            // Load row data for editing
+            function loadRowData(rowId) {
+                fetch(`http://127.0.0.1:8081/get-row/${rowId}`)
+                    .then(response => response.json())
+                    .then(row => {
+                        const dynamicFieldsContainer = document.getElementById('dynamic-fields');
+                        dynamicFieldsContainer.innerHTML = '';
+                        document.getElementById('row-id').value = row.id; // Set the hidden input for ID
+    
+                        Object.keys(row).forEach(key => {
+                            if (key !== 'id') { // Exclude ID field
+                                const formGroup = document.createElement('div');
+                                formGroup.className = 'mb-3';
+                                formGroup.innerHTML = `
+                                    <label for="${key}" class="form-label">${key}</label>
+                                    <input type="text" class="form-control" id="${key}" name="${key}" value="${row[key]}" required>
+                                `;
+                                dynamicFieldsContainer.appendChild(formGroup);
+                            }
+                        });
+                    })
+                    .catch(error => console.error('Error loading row data:', error));
+            }
+    
+            // Delete row
+            function deleteRow(rowId) {
+                fetch(`http://127.0.0.1:8081/delete-row/${rowId}`, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(() => {
+                        loadTableData(tableName); // Reload the table data
                     })
                     .catch(error => console.error('Error deleting row:', error));
             }
-
-            // Event listener for adding a new row
-            document.getElementById('add-row-button').addEventListener('click', () => {
-                document.getElementById('row-id').value = ''; // Clear ID for new row
-                document.getElementById('rowModalLabel').textContent = 'Add New Row';
-                loadDynamicFields(); // Load fields for new row
-            });
-
-            // Event listener for form submission
+    
+            // Handle form submission
             document.getElementById('row-form').addEventListener('submit', (e) => {
                 e.preventDefault();
-
                 const formData = new FormData(e.target);
-                const data = {};
-                formData.forEach((value, key) => {
-                    data[key] = value;
-                });
-
-                // Remove the ID from the data object if it exists
-                if (data.id) {
-                    delete data.id;
-                }
-
-                console.log('Form Data:', data); // Log form data before sending
-
-                const method = document.getElementById('row-id').value ? 'PUT' : 'POST';
-                const url = document.getElementById('row-id').value ? `http://127.0.0.1:8081/update/${document.getElementById('row-id').value}` : `http://127.0.0.1:8081/add/${tableName}`;
-
-                fetch(url, {
+                const method = document.getElementById('row-id').value ? 'PUT' : 'POST'; // Determine method based on presence of row ID
+    
+                fetch(`http://127.0.0.1:8081/save-row`, {
                     method: method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
+                    body: formData
                 })
                 .then(response => response.json())
-                .then(result => {
-                    console.log('Row saved:', result);
-                    loadTableData(tableName); // Refresh the table
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('rowModal'));
-                    modal.hide(); // Close the modal
+                .then(() => {
+                    $('#rowModal').modal('hide'); // Hide the modal
+                    loadTableData(tableName); // Reload the table data
                 })
                 .catch(error => console.error('Error saving row:', error));
             });

@@ -156,8 +156,11 @@
                 myModal.show();
             });
 
-            // Reset modal on close
-            document.getElementById('createTableModal').addEventListener('hidden.bs.modal', resetModal);
+            // Reset modal on close and redirect to dashboard
+            document.getElementById('createTableModal').addEventListener('hidden.bs.modal', () => {
+                resetModal(); // Reset the form fields
+                window.location.href = 'dashboard.html'; // Redirect to dashboard
+            });
 
             // Handle form submission for creating a new category
             document.getElementById('create-table-form').addEventListener('submit', (event) => {
