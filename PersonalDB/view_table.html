@@ -271,65 +271,91 @@
 }
 
 
-            // Function to load dynamic fields for the modal
-            function loadDynamicFields(rowId = null) {
-                fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
-                    .then(response => response.json())
-                    .then(schema => {
-                        const dynamicFields = document.getElementById('dynamic-fields');
-                        dynamicFields.innerHTML = '';
+function loadDynamicFields(rowId = null) {
+    fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(schema => {
+            const dynamicFields = document.getElementById('dynamic-fields');
+            dynamicFields.innerHTML = '';
 
-                        schema.data.forEach(field => {
-                            const fieldHTML = `
-                                <div class="mb-3">
-                                    <label for="${field.name}" class="form-label">${field.name}</label>
-                                    <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
-                                </div>
-                            `;
-                            dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
-                        });
-
-                        if (rowId) {
-                            fetch(`http://127.0.0.1:8081/get-row/${rowId}`)
-                                .then(response => response.json())
-                                .then(row => {
-                                    for (const field in row.data) {
-                                        if (document.getElementById(field)) {
-                                            document.getElementById(field).value = row.data[field];
-                                        }
-                                    }
-                                    document.getElementById('row-id').value = rowId; // Set the ID for editing
-                                    document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
-                                });
-                        } else {
-                            document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
-                        }
-                    })
-                    .catch(error => console.error('Error loading schema:', error));
+            if (!schema.data || schema.data.length === 0) {
+                console.error('No schema data found:', schema);
+                return;
             }
 
-            // Form submit handler
-            document.getElementById('row-form').addEventListener('submit', (event) => {
-                event.preventDefault();
-                const formData = new FormData(event.target);
-                const rowId = formData.get('id');
-                const method = rowId ? 'PUT' : 'POST'; // Determine method based on presence of ID
-                const url = rowId ? `http://127.0.0.1:8081/update-row/${rowId}` : `http://127.0.0.1:8081/add-row/${encodeURIComponent(tableName)}`;
-
-                fetch(url, {
-                    method: method,
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(result => {
-                    console.log('Row saved:', result);
-                    loadTableData(tableName); // Reload table data after saving
-                    document.getElementById('rowModal').modal('hide'); // Close the modal
-                })
-                .catch(error => {
-                    console.error('Error saving row:', error);
-                });
+            schema.data.forEach(field => {
+                const fieldHTML = `
+                    <div class="mb-3">
+                        <label for="${field.name}" class="form-label">${field.name}</label>
+                        <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
+                    </div>
+                `;
+                dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
             });
+
+            if (rowId) {
+                fetch(`http://127.0.0.1:8081/get-row/${rowId}`)
+                    .then(response => response.json())
+                    .then(row => {
+                        for (const field in row.data) {
+                            if (document.getElementById(field)) {
+                                document.getElementById(field).value = row.data[field];
+                            }
+                        }
+                        document.getElementById('row-id').value = rowId; // Set the ID for editing
+                        document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
+                    });
+            } else {
+                document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
+            }
+        })
+        .catch(error => console.error('Error loading schema:', error));
+}
+
+
+            // Form submit handler
+document.getElementById('row-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const rowId = formData.get('id');
+    const method = rowId ? 'PUT' : 'POST'; // Determine method based on presence of ID
+    const url = rowId 
+        ? `http://127.0.0.1:8081/update-row/${rowId}` 
+        : `http://127.0.0.1:8081/save-row/${encodeURIComponent(tableName)}`;
+
+    // Convert FormData to a plain object for easier debugging
+    const data = {};
+    formData.forEach((value, key) => {
+        data[key] = value;
+    });
+
+    // Log the data being sent
+    console.log('Data to send:', data);
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json', // Specify JSON content type
+        },
+        body: JSON.stringify(data) // Send data as JSON
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Row saved:', result);
+        loadTableData(tableName); // Reload table data after saving
+        const modal = bootstrap.Modal.getInstance(document.getElementById('rowModal'));
+        modal.hide(); // Close the modal
+    })
+    .catch(error => {
+        console.error('Error saving row:', error);
+    });
+});
+
 
             // Logout functionality
             document.getElementById('logout').addEventListener('click', () => {

@@ -169,6 +169,34 @@ app.post('/create-table', [
     });
 });
 
+// Endpoint to get the schema of a specific table, excluding the 'id' column
+app.get('/get-table-schema/:tableName', (req, res) => {
+    const tableName = req.params.tableName;
+
+    // Use the SHOW COLUMNS command to fetch the schema
+    pool.query('SHOW COLUMNS FROM ??', [tableName], (err, results) => {
+        if (err) {
+            console.error('Error fetching table schema:', err);
+            return sendResponse(res, 500, 'Error fetching table schema');
+        }
+
+        // Extract column names and data types from the results, excluding 'id'
+        const schema = results
+            .filter(row => row.Field !== 'id') // Filter out the 'id' column
+            .map(row => ({
+                name: row.Field,
+                type: row.Type,
+                isNullable: row.Null === 'YES',
+                key: row.Key,
+                default: row.Default,
+                extra: row.Extra,
+            }));
+
+        sendResponse(res, 200, 'Schema fetched successfully', schema);
+    });
+});
+
+
 // Endpoint to get column names and data types for a specific table
 app.get('/table/columns/:tableName', (req, res) => {
     const tableName = req.params.tableName;
@@ -268,17 +296,19 @@ app.post('/save-row/:tableName', (req, res) => {
         // Prepare the insert query
         const columns = Object.keys(rowData);
         const values = Object.values(rowData);
-        const query = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (?)`;
+        const placeholders = columns.map(() => '?').join(', '); // Create placeholders for values
+        const query = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${placeholders})`;
 
-        pool.query(query, [values], (error) => {
+        pool.query(query, values, (error) => {
             if (error) {
                 console.error('Error inserting row:', error);
-                return sendResponse(res, 500, 'Error inserting row');
+                return sendResponse(res, 500, 'Error inserting row: ' + error.sqlMessage);
             }
             sendResponse(res, 200, 'Row inserted successfully');
         });
     });
 });
+
 
 // Endpoint to get rows from a specific table
 app.get('/get-rows/:tableName', (req, res) => {
