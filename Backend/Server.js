@@ -308,6 +308,71 @@ app.post('/save-row/:tableName', (req, res) => {
         });
     });
 });
+// Endpoint to edit a row in a specific table
+app.put('/edit-row/:tableName/:rowId', (req, res) => {
+    const tableName = req.params.tableName;
+    const rowId = req.params.rowId; // Assuming the row ID is passed as a URL parameter
+    const rowData = req.body; // Data to update
+
+    // Check if the table exists
+    pool.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
+        if (error) {
+            console.error('Error checking table existence:', error);
+            return sendResponse(res, 500, 'Error checking table existence');
+        }
+        if (results.length === 0) {
+            console.error('Table not found:', tableName);
+            return sendResponse(res, 404, 'Table not found');
+        }
+
+        // Prepare the update query
+        const columns = Object.keys(rowData);
+        const values = Object.values(rowData);
+        const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', '); // Create SET clause
+        const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`; // Assuming the primary key is named 'id'
+
+        // Include rowId in the values for the query
+        values.push(rowId);
+
+        pool.query(query, values, (error) => {
+            if (error) {
+                console.error('Error updating row:', error);
+                return sendResponse(res, 500, 'Error updating row: ' + error.sqlMessage);
+            }
+            sendResponse(res, 200, 'Row updated successfully');
+        });
+    });
+});
+
+// Endpoint to get a specific row from a specific table by row ID
+app.get('/get-row/:tableName/:rowId', (req, res) => {
+    const tableName = req.params.tableName;
+    const rowId = req.params.rowId;
+
+    // Check if the table exists
+    pool.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
+        if (error) {
+            console.error('Error checking table existence:', error);
+            return sendResponse(res, 500, 'Error checking table existence');
+        }
+        if (results.length === 0) {
+            return sendResponse(res, 404, 'Table not found');
+        }
+
+        // Fetch the row with the specified ID
+        const query = `SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`;
+        pool.query(query, [rowId], (error, rows) => {
+            if (error) {
+                console.error('Error fetching row:', error);
+                return sendResponse(res, 500, 'Error fetching row');
+            }
+            if (rows.length === 0) {
+                return sendResponse(res, 404, 'Row not found');
+            }
+            sendResponse(res, 200, 'Row fetched successfully', rows[0]); // Send the first row only
+        });
+    });
+});
 
 
 // Endpoint to get rows from a specific table

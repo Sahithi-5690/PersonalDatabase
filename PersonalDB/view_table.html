@@ -272,6 +272,7 @@
 
 
 function loadDynamicFields(rowId = null) {
+    // Fetch the table schema first
     fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
         .then(response => {
             if (!response.ok) {
@@ -281,13 +282,14 @@ function loadDynamicFields(rowId = null) {
         })
         .then(schema => {
             const dynamicFields = document.getElementById('dynamic-fields');
-            dynamicFields.innerHTML = '';
+            dynamicFields.innerHTML = ''; // Clear existing fields
 
             if (!schema.data || schema.data.length === 0) {
                 console.error('No schema data found:', schema);
                 return;
             }
 
+            // Create dynamic fields based on the schema
             schema.data.forEach(field => {
                 const fieldHTML = `
                     <div class="mb-3">
@@ -298,18 +300,31 @@ function loadDynamicFields(rowId = null) {
                 dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
             });
 
+            // If we have a rowId, fetch the row data to populate the fields
             if (rowId) {
-                fetch(`http://127.0.0.1:8081/get-row/${rowId}`)
-                    .then(response => response.json())
+                fetch(`http://127.0.0.1:8081/get-row/${encodeURIComponent(tableName)}/${rowId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(row => {
+                        console.log('Row data fetched:', row); // Debug log
                         for (const field in row.data) {
-                            if (document.getElementById(field)) {
-                                document.getElementById(field).value = row.data[field];
+                            const inputElement = document.getElementById(field);
+                            if (inputElement) {
+                                inputElement.value = row.data[field]; // Populate input with row data
                             }
                         }
                         document.getElementById('row-id').value = rowId; // Set the ID for editing
                         document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
-                    });
+
+                        // Show the modal after setting values
+                        const modal = new bootstrap.Modal(document.getElementById('rowModal'));
+                        modal.show();
+                    })
+                    .catch(error => console.error('Error loading row data:', error));
             } else {
                 document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
             }
@@ -318,14 +333,24 @@ function loadDynamicFields(rowId = null) {
 }
 
 
-            // Form submit handler
+
+document.querySelectorAll('.edit-row').forEach(button => {
+    button.addEventListener('click', () => {
+        const rowId = button.getAttribute('data-id');
+        loadDynamicFields(rowId); // Call the updated function with the rowId
+    });
+});
+
+
+
+// Form submit handler
 document.getElementById('row-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const rowId = formData.get('id');
     const method = rowId ? 'PUT' : 'POST'; // Determine method based on presence of ID
     const url = rowId 
-        ? `http://127.0.0.1:8081/update-row/${rowId}` 
+        ? `http://127.0.0.1:8081/edit-row/${tableName}/${rowId}` // Corrected endpoint for editing
         : `http://127.0.0.1:8081/save-row/${encodeURIComponent(tableName)}`;
 
     // Convert FormData to a plain object for easier debugging
@@ -355,6 +380,7 @@ document.getElementById('row-form').addEventListener('submit', (event) => {
         console.error('Error saving row:', error);
     });
 });
+
 
 
             // Logout functionality
