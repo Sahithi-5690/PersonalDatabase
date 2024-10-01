@@ -10,7 +10,7 @@ app.use(express.json()); // Parses JSON request bodies
 
 // Database connection pool setup
 const pool = mysql.createPool({
-    connectionLimit: 10, // Adjust based on your needs
+    connectionLimit: 10,
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
@@ -148,8 +148,7 @@ app.post('/create-table', [
         attributes.forEach(attr => {
             query += `${mysql.escapeId(attr.name)} ${attr.type}, `;
         });
-        query = query.slice(0, -2); // Remove trailing comma and space
-        query += ')';
+        query = query.slice(0, -2) + ')'; // Remove trailing comma and space
 
         // Create the table
         pool.query(query, (error) => {
@@ -174,8 +173,7 @@ app.post('/create-table', [
 app.get('/table/columns/:tableName', (req, res) => {
     const tableName = req.params.tableName;
 
-    const sql = `SHOW COLUMNS FROM ??`;
-    pool.query(sql, [tableName], (err, results) => {
+    pool.query('SHOW COLUMNS FROM ??', [tableName], (err, results) => {
         if (err) {
             console.error('Error fetching column names:', err);
             return sendResponse(res, 500, 'Error fetching column names');
@@ -222,8 +220,7 @@ app.delete('/delete-table/:tableName', (req, res) => {
     });
 });
 
-// Endpoint to insert a row into a specific table
-app.post('/add-row/:tableName', (req, res) => {
+app.post('/save-row/:tableName', (req, res) => {
     const tableName = req.params.tableName;
     const rowData = req.body;
 
@@ -234,6 +231,7 @@ app.post('/add-row/:tableName', (req, res) => {
             return sendResponse(res, 500, 'Error checking table existence');
         }
         if (results.length === 0) {
+            console.error('Table not found:', tableName);
             return sendResponse(res, 404, 'Table not found');
         }
 

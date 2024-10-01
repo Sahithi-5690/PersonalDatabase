@@ -132,32 +132,29 @@
                 window.location.href = 'index.html';
                 return;
             }
-    
+
             const params = new URLSearchParams(window.location.search);
             const tableName = params.get('table');
-    
+
             if (!tableName) {
                 document.getElementById('card-details').innerHTML = 'No table specified.';
                 return;
             }
-    
+
             document.getElementById('table-title').textContent = `${tableName} Category`;
-    
+
             // Load category list
             loadCategoryList(userId);
-    
+
             // Load table data
             loadTableData(tableName);
-    
-            // Add event listener for Add New Row button
+
+            // Load dynamic fields when opening the modal
             document.getElementById('add-row-button').addEventListener('click', () => {
-                // Clear the hidden input for row id
-                document.getElementById('row-id').value = ''; // Clear the id for new rows
-    
-                // Load the dynamic fields for a new row
-                loadDynamicFields();
+                loadDynamicFields(); // Load dynamic fields for new row
+                document.getElementById('row-id').value = ''; // Reset the hidden ID field
             });
-    
+
             // Function to load category list
             function loadCategoryList(userId) {
                 fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
@@ -165,12 +162,12 @@
                     .then(tables => {
                         const dropdownMenu = document.getElementById('dropdown-menu');
                         dropdownMenu.innerHTML = '';
-    
+
                         if (!Array.isArray(tables.data)) {
                             console.error('Expected tables to be an array', tables);
                             return;
                         }
-    
+
                         tables.data.forEach(table => {
                             const listItem = document.createElement('li');
                             const linkItem = document.createElement('a');
@@ -183,7 +180,7 @@
                     })
                     .catch(error => console.error('Error loading categories:', error));
             }
-    
+
             // Function to load table data
             function loadTableData(tableName) {
                 fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`)
@@ -201,7 +198,7 @@
                         document.getElementById('card-details').innerHTML = 'Error fetching table data: ' + error.message;
                     });
             }
-    
+
             // Function to render table data in a tabular form
             function renderTable(data) {
                 let tableHTML = `
@@ -215,7 +212,7 @@
                         </thead>
                         <tbody>
                 `;
-    
+
                 data.forEach(row => {
                     tableHTML += `
                         <tr>
@@ -228,106 +225,115 @@
                         </tr>
                     `;
                 });
-    
+
                 tableHTML += `
                         </tbody>
                     </table>
                 `;
-    
+
                 document.getElementById('card-details').innerHTML = tableHTML;
-    
-                // Add event listeners for Edit and Delete buttons
+
+                // Add event listeners for Edit/Delete buttons
                 document.querySelectorAll('.edit-row').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const rowId = e.target.getAttribute('data-id');
-                        loadRowData(rowId);
+                    button.addEventListener('click', () => {
+                        const rowId = button.getAttribute('data-id');
+                        loadRowForEditing(rowId);
                     });
                 });
-    
+
                 document.querySelectorAll('.delete-row').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const rowId = e.target.getAttribute('data-id');
-                        deleteRow(rowId);
+                    button.addEventListener('click', () => {
+                        const rowId = button.getAttribute('data-id');
+                        deleteRow(rowId, tableName);
                     });
                 });
             }
-    
-            // Load dynamic fields for new row
+
+            // Function to load dynamic input fields based on table structure and their data types
             function loadDynamicFields() {
-                fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`)
+                const dynamicFieldsDiv = document.getElementById('dynamic-fields');
+                dynamicFieldsDiv.innerHTML = ''; // Clear previous fields
+
+                // Fetch the column names and data types for creating input fields
+                fetch(`http://127.0.0.1:8081/table/columns/${encodeURIComponent(tableName)}`)
                     .then(response => response.json())
-                    .then(data => {
-                        const dynamicFieldsContainer = document.getElementById('dynamic-fields');
-                        dynamicFieldsContainer.innerHTML = '';
-    
-                        if (data.data.length > 0) {
-                            const keys = Object.keys(data.data[0]);
-                            keys.forEach(key => {
-                                if (key !== 'id') { // Exclude ID field
-                                    const formGroup = document.createElement('div');
-                                    formGroup.className = 'mb-3';
-                                    formGroup.innerHTML = `
-                                        <label for="${key}" class="form-label">${key}</label>
-                                        <input type="text" class="form-control" id="${key}" name="${key}" required>
-                                    `;
-                                    dynamicFieldsContainer.appendChild(formGroup);
-                                }
-                            });
+                    .then(columns => {
+                        console.log('Fetched columns:', columns); // Debugging line
+                        if (!columns.data || columns.data.length === 0) {
+                            console.error('No columns found for this table', columns);
+                            return;
                         }
-                    })
-                    .catch(error => console.error('Error loading dynamic fields:', error));
-            }
-    
-            // Load row data for editing
-            function loadRowData(rowId) {
-                fetch(`http://127.0.0.1:8081/get-row/${rowId}`)
-                    .then(response => response.json())
-                    .then(row => {
-                        const dynamicFieldsContainer = document.getElementById('dynamic-fields');
-                        dynamicFieldsContainer.innerHTML = '';
-                        document.getElementById('row-id').value = row.id; // Set the hidden input for ID
-    
-                        Object.keys(row).forEach(key => {
-                            if (key !== 'id') { // Exclude ID field
-                                const formGroup = document.createElement('div');
-                                formGroup.className = 'mb-3';
-                                formGroup.innerHTML = `
-                                    <label for="${key}" class="form-label">${key}</label>
-                                    <input type="text" class="form-control" id="${key}" name="${key}" value="${row[key]}" required>
-                                `;
-                                dynamicFieldsContainer.appendChild(formGroup);
+                        columns.data.forEach(column => {
+                            if (column.name && column.name !== 'id') { // Skip the ID column
+                                const inputGroup = document.createElement('div');
+                                inputGroup.className = 'mb-3';
+
+                                const label = document.createElement('label');
+                                label.className = 'form-label';
+                                label.textContent = column.name;
+
+                                const input = document.createElement('input');
+                                input.name = column.name; // Ensure the input name matches the expected database column
+                                input.required = true; // Make it a required field
+
+                                // Determine input type based on data type
+                                switch (column.data_type) {
+                                    case 'text':
+                                        input.type = 'text';
+                                        break;
+                                    case 'number':
+                                        input.type = 'number';
+                                        break;
+                                    case 'date':
+                                        input.type = 'date';
+                                        break;
+                                    default:
+                                        input.type = 'text';
+                                        break;
+                                }
+
+                                inputGroup.appendChild(label);
+                                inputGroup.appendChild(input);
+                                dynamicFieldsDiv.appendChild(inputGroup);
                             }
                         });
                     })
-                    .catch(error => console.error('Error loading row data:', error));
+                    .catch(error => console.error('Error fetching columns:', error));
             }
-    
-            // Delete row
-            function deleteRow(rowId) {
-                fetch(`http://127.0.0.1:8081/delete-row/${rowId}`, { method: 'DELETE' })
+
+            // Handle form submission for adding/editing a row
+            document.getElementById('row-form').addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevent the default form submission
+
+                const formData = new FormData(event.target);
+                const rowId = document.getElementById('row-id').value;
+
+                const rowData = Object.fromEntries(formData);
+                if (!rowId) {
+                    delete rowData.id; // Remove ID from data when adding a new row
+                }
+
+                const fetchOptions = {
+                    method: rowId ? 'PUT' : 'POST', // Use PUT for editing, POST for adding
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(rowData), // This will not include id for new entries
+                };
+
+                const url = rowId ? `http://127.0.0.1:8081/update-row/${rowId}` : `http://127.0.0.1:8081/save-row/${encodeURIComponent(tableName)}`;
+
+                fetch(url, fetchOptions)
                     .then(response => response.json())
-                    .then(() => {
-                        loadTableData(tableName); // Reload the table data
+                    .then(result => {
+                        console.log('Row saved:', result);
+                        loadTableData(tableName); // Reload table data
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('rowModal'));
+                        modal.hide(); // Close the modal after saving
                     })
-                    .catch(error => console.error('Error deleting row:', error));
-            }
-    
-            // Handle form submission
-            document.getElementById('row-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const method = document.getElementById('row-id').value ? 'PUT' : 'POST'; // Determine method based on presence of row ID
-    
-                fetch(`http://127.0.0.1:8081/save-row`, {
-                    method: method,
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(() => {
-                    $('#rowModal').modal('hide'); // Hide the modal
-                    loadTableData(tableName); // Reload the table data
-                })
-                .catch(error => console.error('Error saving row:', error));
+                    .catch(error => {
+                        console.error('Error saving row:', error);
+                    });
             });
         });
     </script>
