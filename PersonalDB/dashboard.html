@@ -80,6 +80,10 @@
                 window.location.href = 'index.html'; // Redirect to login page
                 return;
             }
+            document.getElementById('createTableModal').addEventListener('hidden.bs.modal', () => {
+    resetModal(); // Reset the form fields
+    window.location.href = 'dashboard.html'; // Redirect to dashboard
+});
 
             // Load user-specific table names into the dropdown menu
             function loadUserTables() {
