@@ -64,6 +64,35 @@ const createUserTablesTable = () => {
     });
 };
 
+// Endpoint to add a new user to the database
+app.post('/add-user', [
+    check('userId').notEmpty().withMessage('UserId is required'),
+    check('firstName').notEmpty().withMessage('First name is required'),
+    check('lastName').notEmpty().withMessage('Last name is required'),
+    check('email').isEmail().withMessage('Valid email is required')
+], (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return sendResponse(res, 400, 'Validation errors', errors.array());
+    }
+
+    const { userId, firstName, lastName, email } = req.body;
+
+    // Insert the new user into the 'user' table
+    const query = 'INSERT INTO user (userId, firstName, lastName, email) VALUES (?, ?, ?, ?)';
+    pool.query(query, [userId, firstName, lastName, email], (error) => {
+        if (error) {
+            if (error.code === 'ER_DUP_ENTRY') {
+                return sendResponse(res, 400, 'User with this email already exists');
+            }
+            console.error('Error inserting user:', error);
+            return sendResponse(res, 500, 'Error inserting user: ' + error.message);
+        }
+        sendResponse(res, 200, 'User added successfully');
+    });
+});
+
+
 // Ensure necessary tables are created on startup
 createUserTable();
 createUserTablesTable();
