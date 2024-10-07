@@ -26,6 +26,18 @@ pool.getConnection((err) => {
     console.log('Connected to database.');
 });
 
+// Middleware to check if user exists
+const checkUserExists = (req, res, next) => {
+    const userId = req.body.userId || req.query.userId;
+    pool.query('SELECT * FROM user WHERE userId = ?', [userId], (error, results) => {
+        if (error || results.length === 0) {
+            console.error('User not found:', error);
+            return sendResponse(res, 400, 'User not found');
+        }
+        next();
+    });
+};
+
 // Create 'user' table if it doesn't exist
 const createUserTable = () => {
     const query = `
@@ -92,7 +104,6 @@ app.post('/add-user', [
     });
 });
 
-
 // Ensure necessary tables are created on startup
 createUserTable();
 createUserTablesTable();
@@ -134,18 +145,6 @@ app.get('/tables', (req, res) => {
         sendResponse(res, 200, 'Tables fetched successfully', tables);
     });
 });
-
-// Middleware to check if user exists
-const checkUserExists = (req, res, next) => {
-    const userId = req.body.userId || req.query.userId;
-    pool.query('SELECT * FROM user WHERE userId = ?', [userId], (error, results) => {
-        if (error || results.length === 0) {
-            console.error('User not found:', error);
-            return sendResponse(res, 400, 'User not found');
-        }
-        next();
-    });
-};
 
 // Endpoint to create a new table for a user
 app.post('/create-table', [
