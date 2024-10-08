@@ -45,6 +45,7 @@
     <div class="container" style="padding-top: 4%;">
         <h1 class="dashboard__title">Welcome to Dashboard</h1>
         <button type="button" class="btn btn-primary" id="add-table-btn" data-bs-toggle="modal" data-bs-target="#createTableModal">+ Add New Category</button>
+        <button type="button" class="btn btn-danger" id="drop-table-btn" data-bs-toggle="modal" data-bs-target="#dropTableModal">- Drop Category</button>
     </div>
 
     <!-- Modal for creating a new table -->
@@ -72,6 +73,27 @@
         </div>
     </div>
 
+    <!-- Modal for dropping a category -->
+    <div class="modal fade" id="dropTableModal" tabindex="-1" aria-labelledby="dropTableModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dropTableModalLabel">Drop Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <select class="form-select" id="drop-table-select" required>
+                        <option value="">Select Category to Drop</option>
+                        <!-- Options will be populated here -->
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="confirm-drop">Drop Category</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const userId = localStorage.getItem('userId');
@@ -89,10 +111,19 @@
                         if (result.success) {
                             const dropdownMenu = document.getElementById('dropdown-menu');
                             dropdownMenu.innerHTML = ''; // Clear any existing dropdown items
+
+                            // Populate dropdown menu for categories
+                            const dropTableSelect = document.getElementById('drop-table-select');
+                            dropTableSelect.innerHTML = ''; // Clear previous options
+                            dropTableSelect.appendChild(new Option('Select Category to Drop', ''));
+
                             result.data.forEach(table => {
                                 const li = document.createElement('li');
                                 li.innerHTML = `<a class="dropdown-item" href="view_table.html?table=${table}">${table}</a>`;
                                 dropdownMenu.appendChild(li);
+
+                                // Add option to drop select
+                                dropTableSelect.appendChild(new Option(table, table));
                             });
                         } else {
                             console.error('Failed to load tables:', result.message);
@@ -121,6 +152,8 @@
                         <option value="">Select Data Type</option>
                         <option value="INT">Numeric</option>
                         <option value="VARCHAR(255)">Text</option>
+                        <option value="IMAGE">Image</option>
+                        <option value="SONG">Song</option>
                     </select>
                     <button type="button" class="btn btn-danger mt-2 remove-attribute" data-attribute-id="${attributeCount}">Remove</button>
                 `;
@@ -151,25 +184,45 @@
             });
 
             // Reset modal on close and redirect to dashboard
-            document.getElementById('createTableModal').addEventListener('hidden.bs.modal', () => {
-                resetModal(); // Reset the form fields
-                window.location.href = 'dashboard.html'; // Redirect to dashboard
-            });
+document.getElementById('createTableModal').addEventListener('hidden.bs.modal', () => {
+    resetModal(); // Reset the form fields when modal is closed
+    window.location.href = 'dashboard.html'; // Redirect to dashboard
+});
+
 
             // Handle form submission for creating a new category
-            document.getElementById('create-table-form').addEventListener('submit', (event) => {
-                event.preventDefault(); // Prevent the default form submission
+document.getElementById('create-table-form').addEventListener('submit', (event) => {
+    event.preventDefault(); // Prevent the default form submission
 
-                const tableName = document.getElementById('table-name').value;
-                const attributes = [];
+    const tableName = document.getElementById('table-name').value;
+    const attributes = [];
+    const attributeNames = new Set(); // To check for duplicates
 
-                // Collect attribute data
-                for (let i = 1; i <= attributeCount; i++) {
-                    const attributeName = document.getElementById(`attribute-name-${i}`)?.value;
-                    const attributeType = document.getElementById(`attribute-type-${i}`)?.value;
-                    if (attributeName && attributeType) {
-                        attributes.push({ name: attributeName, type: attributeType });
-                    }
+    // Collect attribute data
+    for (let i = 1; i <= attributeCount; i++) {
+        const attributeName = document.getElementById(`attribute-name-${i}`)?.value;
+        const attributeType = document.getElementById(`attribute-type-${i}`)?.value;
+
+        if (attributeName && attributeType) {
+            // Check for duplicate attribute names
+            if (attributeNames.has(attributeName)) {
+                alert(`Attribute name "${attributeName}" is already used. Please choose a different name.`);
+                return;
+            }
+            attributeNames.add(attributeName); // Add to set if unique
+            attributes.push({ name: attributeName, type: attributeType });
+        }
+    }
+
+    // Check if category name already exists
+    fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const existingCategoryNames = result.data.map(table => table.toLowerCase());
+                if (existingCategoryNames.includes(tableName.toLowerCase())) {
+                    alert('Category name already exists. Please choose a different category name.');
+                    return;
                 }
 
                 // Send request to create a new category
@@ -186,8 +239,13 @@
                         alert('Category created successfully');
                         resetModal(); // Reset modal fields
                         loadUserTables(); // Reload tables in the dropdown
-                        const myModal = new bootstrap.Modal(document.getElementById('createTableModal'));
+                        
+                        // Close the modal after successful creation
+                        const myModal = bootstrap.Modal.getInstance(document.getElementById('createTableModal'));
                         myModal.hide();
+                        
+                        // Redirect to dashboard after modal is closed
+                        window.location.href = 'dashboard.html'; // Redirect to dashboard
                     } else {
                         console.error('Error creating category:', result.message);
                     }
@@ -195,13 +253,49 @@
                 .catch(error => {
                     console.error('Error creating category:', error);
                 });
-            });
+            } else {
+                console.error('Failed to load existing categories:', result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching existing categories:', error);
+        });
+});
 
-            // Logout logic
-            document.getElementById('logout').addEventListener('click', () => {
-                localStorage.removeItem('userId');
-                window.location.href = 'index.html';
+            // Handle category dropping
+            document.getElementById('confirm-drop').addEventListener('click', () => {
+                const categoryToDrop = document.getElementById('drop-table-select').value;
+                if (!categoryToDrop) {
+                    alert('Please select a category to drop.');
+                    return;
+                }
+
+                fetch(`http://127.0.0.1:8081/drop-table`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tableName: categoryToDrop, userId })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('Category dropped successfully');
+                        loadUserTables(); // Reload tables in the dropdown
+                    } else {
+                        console.error('Error dropping category:', result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error dropping category:', error);
+                });
             });
+        });
+
+        // Logout functionality
+        document.getElementById('logout').addEventListener('click', () => {
+            localStorage.removeItem('userId');
+            window.location.href = 'index.html'; // Redirect to login page
         });
     </script>
 </body>

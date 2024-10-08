@@ -173,9 +173,27 @@ app.post('/create-table', [
 
         // Dynamically generate SQL query for creating a new table
         let query = `CREATE TABLE ${mysql.escapeId(tableName)} (id INT AUTO_INCREMENT PRIMARY KEY, `;
+        
         attributes.forEach(attr => {
-            query += `${mysql.escapeId(attr.name)} ${attr.type}, `;
+            // Adjust the attribute types to MySQL compatible types
+            let dataType;
+            switch (attr.type) {
+                case 'INT':
+                    dataType = 'INT';
+                    break;
+                case 'VARCHAR(255)':
+                    dataType = 'VARCHAR(255)';
+                    break;
+                case 'IMAGE':
+                case 'SONG':
+                    dataType = 'VARCHAR(255)'; // Store paths or identifiers as VARCHAR
+                    break;
+                default:
+                    return sendResponse(res, 400, `Invalid attribute type: ${attr.type}`);
+            }
+            query += `${mysql.escapeId(attr.name)} ${dataType}, `;
         });
+        
         query = query.slice(0, -2) + ')'; // Remove trailing comma and space
 
         // Create the table
@@ -196,6 +214,7 @@ app.post('/create-table', [
         });
     });
 });
+
 
 // Endpoint to get the schema of a specific table, excluding the 'id' column
 app.get('/get-table-schema/:tableName', (req, res) => {
@@ -274,9 +293,9 @@ app.delete('/delete-row/:tableName/:rowId', (req, res) => {
 });
 
 
-// Endpoint to delete a table
-app.delete('/delete-table/:tableName', (req, res) => {
-    const { tableName } = req.params;
+// Updated endpoint to delete a table, ensuring the user exists
+app.delete('/drop-table', checkUserExists, (req, res) => {
+    const { tableName, userId } = req.body; // Expecting tableName and userId in the request body
 
     // Check if the table exists before attempting to delete
     pool.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
@@ -295,7 +314,7 @@ app.delete('/delete-table/:tableName', (req, res) => {
             }
 
             // Remove the table link from user_tables
-            pool.query('DELETE FROM user_tables WHERE tableName = ?', [tableName], (err) => {
+            pool.query('DELETE FROM user_tables WHERE userId = ? AND tableName = ?', [userId, tableName], (err) => {
                 if (err) {
                     console.error('Error removing table from user_tables:', err);
                     return sendResponse(res, 500, 'Error removing table from user_tables');
@@ -305,6 +324,7 @@ app.delete('/delete-table/:tableName', (req, res) => {
         });
     });
 });
+
 
 app.post('/save-row/:tableName', (req, res) => {
     const tableName = req.params.tableName;
