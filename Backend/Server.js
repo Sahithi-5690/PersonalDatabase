@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql');
+const mysql = require('mysql'); // Using mysql package
 const cors = require('cors');
 const { check, validationResult } = require('express-validator');
 require('dotenv').config();
@@ -18,12 +18,13 @@ const pool = mysql.createPool({
 });
 
 // Ensure connection pool is working
-pool.getConnection((err) => {
+pool.getConnection((err, connection) => {
     if (err) {
         console.error('Database connection failed: ' + err.stack);
         return;
     }
     console.log('Connected to database.');
+    connection.release(); // Release connection back to pool
 });
 
 // Middleware to check if user exists
@@ -215,7 +216,6 @@ app.post('/create-table', [
     });
 });
 
-
 // Endpoint to get the schema of a specific table, excluding the 'id' column
 app.get('/get-table-schema/:tableName', (req, res) => {
     const tableName = req.params.tableName;
@@ -240,26 +240,6 @@ app.get('/get-table-schema/:tableName', (req, res) => {
             }));
 
         sendResponse(res, 200, 'Schema fetched successfully', schema);
-    });
-});
-
-
-// Endpoint to get column names and data types for a specific table
-app.get('/table/columns/:tableName', (req, res) => {
-    const tableName = req.params.tableName;
-
-    pool.query('SHOW COLUMNS FROM ??', [tableName], (err, results) => {
-        if (err) {
-            console.error('Error fetching column names:', err);
-            return sendResponse(res, 500, 'Error fetching column names');
-        }
-
-        // Extract column names and data types from the results
-        const columns = results.map(row => ({
-            name: row.Field,
-            type: row.Type,
-        }));
-        sendResponse(res, 200, 'Column names and types fetched successfully', columns);
     });
 });
 
@@ -291,7 +271,6 @@ app.delete('/delete-row/:tableName/:rowId', (req, res) => {
         });
     });
 });
-
 
 // Updated endpoint to delete a table, ensuring the user exists
 app.delete('/drop-table', checkUserExists, (req, res) => {
@@ -325,7 +304,7 @@ app.delete('/drop-table', checkUserExists, (req, res) => {
     });
 });
 
-
+// Endpoint to save a row in a table
 app.post('/save-row/:tableName', (req, res) => {
     const tableName = req.params.tableName;
     const rowData = req.body;
@@ -356,6 +335,7 @@ app.post('/save-row/:tableName', (req, res) => {
         });
     });
 });
+
 // Endpoint to edit a row in a specific table
 app.put('/edit-row/:tableName/:rowId', (req, res) => {
     const tableName = req.params.tableName;
@@ -422,7 +402,6 @@ app.get('/get-row/:tableName/:rowId', (req, res) => {
     });
 });
 
-
 // Endpoint to get rows from a specific table
 app.get('/get-rows/:tableName', (req, res) => {
     const tableName = req.params.tableName;
@@ -447,6 +426,190 @@ app.get('/get-rows/:tableName', (req, res) => {
         });
     });
 });
+app.put('/update-category', (req, res) => {
+    const { categoryName, newCategoryName, newAttributes, removeAttributes, renameAttributes, dataTypeChanges, userId } = req.body;
+
+    console.log('Incoming request data:', req.body); // For debugging
+
+    pool.getConnection((err, connection) => {
+        if (err) {
+            console.error('Error getting database connection:', err);
+            return sendResponse(res, 500, 'Database connection error');
+        }
+
+        connection.beginTransaction((err) => {
+            if (err) {
+                connection.release();
+                console.error('Error starting transaction:', err);
+                return sendResponse(res, 500, 'Transaction error');
+            }
+
+            // Helper function to handle errors and rollback
+            const handleError = (error) => {
+                connection.rollback(() => {
+                    connection.release();
+                    console.error('Error updating category:', error);
+                    sendResponse(res, 500, `Error updating category: ${error.message}`);
+                });
+            };
+
+            // Check if the new category name is already taken
+            if (newCategoryName && newCategoryName !== categoryName) {
+                const checkQuery = 'SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = ? AND table_name = ?';
+                connection.query(checkQuery, [process.env.DB_NAME, newCategoryName], (error, results) => {
+                    if (error) return handleError(error);
+                    if (results[0].count > 0) {
+                        connection.release();
+                        return sendResponse(res, 400, 'Category name already taken. Please choose a different name.');
+                    }
+                    proceedWithUpdates();
+                });
+            } else {
+                proceedWithUpdates();
+            }
+
+            // Function to proceed with updates after checks
+            function proceedWithUpdates() {
+                try {
+                    // Handle adding new attributes without skipping existing attributes
+                    if (newAttributes && newAttributes.length > 0) {
+                        const attributePromises = newAttributes.map(({ name, type }) => {
+                            return new Promise((resolve, reject) => {
+                                if (!name || !type) {
+                                    return reject(new Error(`Attribute name and type cannot be empty. Provided: name=${name}, type=${type}`));
+                                }
+
+                                // Check if the attribute already exists
+                                const checkAttributeQuery = 'SELECT COUNT(*) AS count FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?';
+                                connection.query(checkAttributeQuery, [process.env.DB_NAME, categoryName, name], (error, results) => {
+                                    if (error) return reject(error);
+                                    if (results[0].count > 0) {
+                                        console.log(`Attribute "${name}" already exists in category "${categoryName}". Keeping existing attribute.`);
+                                        return resolve();
+                                    }
+
+                                    // Add the new attribute if it doesn't exist
+                                    const addQuery = `ALTER TABLE ?? ADD ?? ${type}`; // Correct SQL syntax: no backticks around type
+                                    connection.query(addQuery, [categoryName, name], (error) => {
+                                        if (error) return reject(error);
+                                        resolve();
+                                    });
+                                });
+                            });
+                        });
+
+                        // Wait for all new attributes to be processed before proceeding
+                        Promise.all(attributePromises).then(() => {
+                            proceedWithOtherUpdates();
+                        }).catch(handleError);
+                    } else {
+                        proceedWithOtherUpdates();
+                    }
+                } catch (error) {
+                    handleError(error);
+                }
+            }
+
+            // Function to proceed with other updates (renaming, modifying, removing attributes, renaming category)
+            function proceedWithOtherUpdates() {
+                try {
+                    const renamePromises = [];
+                    const dataTypePromises = [];
+                    const removePromises = [];
+
+                    // Handle renaming attributes
+                    if (renameAttributes && renameAttributes.length > 0) {
+                        renameAttributes.forEach(({ oldName, newName }) => {
+                            if (!oldName || !newName) {
+                                throw new Error(`Attribute names cannot be empty. oldName=${oldName}, newName=${newName}`);
+                            }
+                            const renameQuery = 'ALTER TABLE ?? CHANGE ?? ?? VARCHAR(255)'; // Assuming VARCHAR(255) as default type for renaming
+                            renamePromises.push(
+                                new Promise((resolve, reject) => {
+                                    connection.query(renameQuery, [categoryName, oldName, newName], (error) => {
+                                        if (error) return reject(error);
+                                        resolve();
+                                    });
+                                })
+                            );
+                        });
+                    }
+
+                    // Handle data type changes
+                    if (dataTypeChanges && dataTypeChanges.length > 0) {
+                        dataTypeChanges.forEach(({ name, newType }) => {
+                            if (!name || !newType) {
+                                throw new Error(`Attribute name and new type cannot be empty. Provided: name=${name}, newType=${newType}`);
+                            }
+                            const updateQuery = 'ALTER TABLE ?? MODIFY ?? ' + newType;
+                            dataTypePromises.push(
+                                new Promise((resolve, reject) => {
+                                    connection.query(updateQuery, [categoryName, name], (error) => {
+                                        if (error) return reject(error);
+                                        resolve();
+                                    });
+                                })
+                            );
+                        });
+                    }
+
+                    // Handle removing attributes
+                    if (removeAttributes && removeAttributes.length > 0) {
+                        removeAttributes.forEach((attr) => {
+                            const dropQuery = 'ALTER TABLE ?? DROP COLUMN ??';
+                            removePromises.push(
+                                new Promise((resolve, reject) => {
+                                    connection.query(dropQuery, [categoryName, attr], (error) => {
+                                        if (error) return reject(error);
+                                        resolve();
+                                    });
+                                })
+                            );
+                        });
+                    }
+
+                    // Execute all renames, data type changes, and removals in parallel
+                    Promise.all([...renamePromises, ...dataTypePromises, ...removePromises])
+                        .then(() => {
+                            proceedWithCategoryRename();
+                        })
+                        .catch(handleError);
+                } catch (error) {
+                    handleError(error);
+                }
+            }
+
+            // Handle category renaming if needed
+            function proceedWithCategoryRename() {
+                if (newCategoryName && newCategoryName !== categoryName) {
+                    const renameCategoryQuery = 'ALTER TABLE ?? RENAME TO ??';
+                    connection.query(renameCategoryQuery, [categoryName, newCategoryName], (error) => {
+                        if (error) return handleError(error);
+                        commitTransaction();
+                    });
+                } else {
+                    commitTransaction();
+                }
+            }
+
+            // Commit the transaction
+            function commitTransaction() {
+                connection.commit((err) => {
+                    if (err) {
+                        connection.rollback(() => {
+                            connection.release();
+                            console.error('Transaction rollback:', err);
+                        });
+                        return sendResponse(res, 500, 'Transaction error');
+                    }
+                    connection.release();
+                    sendResponse(res, 200, 'Category updated successfully');
+                });
+            }
+        });
+    });
+});
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
