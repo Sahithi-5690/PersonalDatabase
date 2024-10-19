@@ -94,25 +94,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Modal for confirming drop category -->
-    <div class="modal fade" id="confirmDropModal" tabindex="-1" aria-labelledby="confirmDropModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="confirmDropModalLabel">Confirm Drop Category</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Are you sure you want to drop the category "<span id="category-to-drop"></span>"?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirm-drop-btn">Confirm Drop</button>
-                </div>
-            </div>
-        </div>
-    </div>
     
     <!-- Modal for editing a category -->
     <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
@@ -332,6 +313,8 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
     });
 });
 
+
+
         // Adding functionality to dynamically add new attributes
         document.getElementById('add-edit-attribute').addEventListener('click', function () {
             const attributesContainer = document.getElementById('edit-attributes-container');
@@ -528,53 +511,41 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
                     });
             });
 
-            // Handle category dropping
-            document.getElementById('confirm-drop').addEventListener('click', () => {
-                const selectedCategoryToDrop = document.getElementById('drop-table-select').value;
+          // Handle category dropping
+document.getElementById('confirm-drop').addEventListener('click', () => {
+    const categoryToDrop = document.getElementById('drop-table-select').value;
+    if (!categoryToDrop) {
+        alert('Please select a category to drop.');
+        return;
+    }
 
-                if (!selectedCategoryToDrop) {
-                    alert('Please select a category to drop.');
-                    return;
-                }
+    // Add a confirmation prompt
+    const userConfirmed = confirm(`Are you sure you want to drop the category: ${categoryToDrop}?`);
+    
+    // Proceed only if the user confirms
+    if (userConfirmed) {
+        fetch(`http://127.0.0.1:8081/drop-table`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ tableName: categoryToDrop, userId })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('Category dropped successfully');
+                loadUserTables(); // Reload tables in the dropdown
+            } else {
+                console.error('Error dropping category:', result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error dropping category:', error);
+        });
+    }
+});
 
-                // Display the selected category name in the confirmation modal
-                document.getElementById('category-to-drop').innerText = selectedCategoryToDrop;
-
-                // Show the confirmation modal
-                const confirmModal = new bootstrap.Modal(document.getElementById('confirmDropModal'));
-                confirmModal.show();
-            });
-
-            // When the user clicks "Confirm Drop" in the modal
-            document.getElementById('confirm-drop-btn').addEventListener('click', () => {
-                const selectedCategoryToDrop = document.getElementById('category-to-drop').innerText;
-                const userId = localStorage.getItem('userId');
-
-                // Proceed with the deletion
-                fetch(`http://127.0.0.1:8081/drop-table`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ tableName: selectedCategoryToDrop, userId })
-                })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        alert('Category dropped successfully');
-                        loadUserTables(); // Reload tables in the dropdown
-
-                        // Hide the confirmation modal
-                        const confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmDropModal'));
-                        confirmModal.hide();
-                    } else {
-                        console.error('Error dropping category:', result.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error dropping category:', error);
-                });
-            });
         });
 
         // Logout functionality
