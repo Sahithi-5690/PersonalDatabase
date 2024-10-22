@@ -77,6 +77,29 @@ const createUserTablesTable = () => {
     });
 };
 
+// Ensure 'table_metadata' exists for storing attribute metadata
+const createTableMetadata = () => {
+    const query = `
+    CREATE TABLE IF NOT EXISTS table_metadata (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tableName VARCHAR(255) NOT NULL,
+        attributeName VARCHAR(255) NOT NULL,
+        semanticType ENUM('INT', 'VARCHAR(255)', 'IMAGE', 'SONG') NOT NULL
+    )`;
+
+    pool.query(query, (err) => {
+        if (err) {
+            console.error('Error creating table_metadata table:', err);
+        } else {
+            console.log('Table_metadata table ensured.');
+        }
+    });
+};
+
+// Call the function on startup
+createTableMetadata();
+
+
 // Endpoint to add a new user to the database
 app.post('/add-user', [
     check('userId').notEmpty().withMessage('UserId is required'),
@@ -174,10 +197,13 @@ app.post('/create-table', [
 
         // Dynamically generate SQL query for creating a new table
         let query = `CREATE TABLE ${mysql.escapeId(tableName)} (id INT AUTO_INCREMENT PRIMARY KEY, `;
-        
+        let metadataInserts = [];
+
         attributes.forEach(attr => {
             // Adjust the attribute types to MySQL compatible types
             let dataType;
+            let semanticType = attr.type; // Save the semantic type for the metatable
+
             switch (attr.type) {
                 case 'INT':
                     dataType = 'INT';
@@ -192,9 +218,11 @@ app.post('/create-table', [
                 default:
                     return sendResponse(res, 400, `Invalid attribute type: ${attr.type}`);
             }
+
             query += `${mysql.escapeId(attr.name)} ${dataType}, `;
+            metadataInserts.push([tableName, attr.name, semanticType]); // Collect metadata inserts
         });
-        
+
         query = query.slice(0, -2) + ')'; // Remove trailing comma and space
 
         // Create the table
@@ -210,36 +238,60 @@ app.post('/create-table', [
                     console.error('Error linking table to user:', err);
                     return sendResponse(res, 500, 'Error linking table to user');
                 }
-                sendResponse(res, 200, 'Table created and linked successfully');
+
+                // Insert metadata for each attribute
+                const metadataQuery = 'INSERT INTO table_metadata (tableName, attributeName, semanticType) VALUES ?';
+                pool.query(metadataQuery, [metadataInserts], (err) => {
+                    if (err) {
+                        console.error('Error inserting metadata:', err);
+                        return sendResponse(res, 500, 'Error inserting metadata');
+                    }
+
+                    sendResponse(res, 200, 'Table and metadata created successfully');
+                });
             });
         });
     });
 });
 
 // Endpoint to get the schema of a specific table, excluding the 'id' column
+// Modify the /get-table-schema/:tableName endpoint
 app.get('/get-table-schema/:tableName', (req, res) => {
     const tableName = req.params.tableName;
 
-    // Use the SHOW COLUMNS command to fetch the schema
+    // Fetch the schema from the MySQL table and also from the metadata table
     pool.query('SHOW COLUMNS FROM ??', [tableName], (err, results) => {
         if (err) {
             console.error('Error fetching table schema:', err);
             return sendResponse(res, 500, 'Error fetching table schema');
         }
 
-        // Extract column names and data types from the results, excluding 'id'
-        const schema = results
-            .filter(row => row.Field !== 'id') // Filter out the 'id' column
-            .map(row => ({
-                name: row.Field,
-                type: row.Type,
-                isNullable: row.Null === 'YES',
-                key: row.Key,
-                default: row.Default,
-                extra: row.Extra,
-            }));
+        // Fetch the semantic types from the metadata table for this table
+        pool.query('SELECT attributeName, semanticType FROM table_metadata WHERE tableName = ?', [tableName], (metaError, metaResults) => {
+            if (metaError) {
+                console.error('Error fetching table metadata:', metaError);
+                return sendResponse(res, 500, 'Error fetching table metadata');
+            }
 
-        sendResponse(res, 200, 'Schema fetched successfully', schema);
+            const semanticTypeMap = {};
+            metaResults.forEach(row => {
+                semanticTypeMap[row.attributeName] = row.semanticType;
+            });
+
+            // Map schema and check if semanticType exists for any attribute
+            const schema = results
+                .filter(row => row.Field !== 'id') // Filter out the 'id' column
+                .map(row => ({
+                    name: row.Field,
+                    type: semanticTypeMap[row.Field] || row.Type, // Use semanticType if available
+                    isNullable: row.Null === 'YES',
+                    key: row.Key,
+                    default: row.Default,
+                    extra: row.Extra,
+                }));
+
+            sendResponse(res, 200, 'Schema fetched successfully', schema);
+        });
     });
 });
 
@@ -286,19 +338,69 @@ app.delete('/drop-table', checkUserExists, (req, res) => {
             return sendResponse(res, 404, 'Table not found');
         }
 
-        pool.query(`DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`, (error) => {
-            if (error) {
-                console.error('Error deleting table:', error);
-                return sendResponse(res, 500, 'Error deleting table');
+        // Begin transaction to ensure both table and metadata are dropped
+        pool.getConnection((err, connection) => {
+            if (err) {
+                console.error('Error getting connection:', err);
+                return sendResponse(res, 500, 'Database connection error');
             }
 
-            // Remove the table link from user_tables
-            pool.query('DELETE FROM user_tables WHERE userId = ? AND tableName = ?', [userId, tableName], (err) => {
+            connection.beginTransaction((err) => {
                 if (err) {
-                    console.error('Error removing table from user_tables:', err);
-                    return sendResponse(res, 500, 'Error removing table from user_tables');
+                    connection.release();
+                    console.error('Error starting transaction:', err);
+                    return sendResponse(res, 500, 'Transaction error');
                 }
-                sendResponse(res, 200, 'Table deleted successfully');
+
+                // Drop the table itself
+                const dropTableQuery = `DROP TABLE IF EXISTS ${mysql.escapeId(tableName)}`;
+                connection.query(dropTableQuery, (error) => {
+                    if (error) {
+                        return connection.rollback(() => {
+                            connection.release();
+                            console.error('Error deleting table:', error);
+                            return sendResponse(res, 500, 'Error deleting table');
+                        });
+                    }
+
+                    // Remove the table link from user_tables
+                    const deleteUserTableLinkQuery = 'DELETE FROM user_tables WHERE userId = ? AND tableName = ?';
+                    connection.query(deleteUserTableLinkQuery, [userId, tableName], (err) => {
+                        if (err) {
+                            return connection.rollback(() => {
+                                connection.release();
+                                console.error('Error removing table from user_tables:', err);
+                                return sendResponse(res, 500, 'Error removing table from user_tables');
+                            });
+                        }
+
+                        // Remove associated metadata from table_metadata
+                        const deleteMetadataQuery = 'DELETE FROM table_metadata WHERE tableName = ?';
+                        connection.query(deleteMetadataQuery, [tableName], (err) => {
+                            if (err) {
+                                return connection.rollback(() => {
+                                    connection.release();
+                                    console.error('Error removing metadata:', err);
+                                    return sendResponse(res, 500, 'Error removing metadata');
+                                });
+                            }
+
+                            // Commit the transaction if all is successful
+                            connection.commit((err) => {
+                                if (err) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        console.error('Transaction commit error:', err);
+                                        return sendResponse(res, 500, 'Transaction commit error');
+                                    });
+                                }
+
+                                connection.release();
+                                sendResponse(res, 200, 'Category and metadata dropped successfully');
+                            });
+                        });
+                    });
+                });
             });
         });
     });
@@ -534,17 +636,71 @@ app.put('/update-category', (req, res) => {
                             );
                         });
                     }
-
-                    // Handle data type changes
                     if (dataTypeChanges && dataTypeChanges.length > 0) {
                         dataTypeChanges.forEach(({ name, newType }) => {
                             if (!name || !newType) {
                                 throw new Error(`Attribute name and new type cannot be empty. Provided: name=${name}, newType=${newType}`);
                             }
-                            const updateQuery = 'ALTER TABLE ?? MODIFY ?? ' + newType;
+                    
+                            // Determine the target SQL type
+                            let sqlType;
+                            switch (newType) {
+                                case 'IMAGE':
+                                case 'SONG':
+                                case 'VARCHAR(255)':
+                                    sqlType = 'VARCHAR(255)'; // Store as VARCHAR(255)
+                                    break;
+                                case 'INT':
+                                    sqlType = 'INT';
+                                    break;
+                                default:
+                                    throw new Error(`Unsupported data type: ${newType}`);
+                            }
+                    
+                            // First, alter the table to change the column type
+                            const alterQuery = `ALTER TABLE ?? MODIFY ?? ${sqlType}`;
                             dataTypePromises.push(
                                 new Promise((resolve, reject) => {
-                                    connection.query(updateQuery, [categoryName, name], (error) => {
+                                    connection.query(alterQuery, [categoryName, name], (error) => {
+                                        if (error) return reject(error);
+                                        resolve();
+                                    });
+                                })
+                            );
+                    
+                            // Handle data conversion based on newType
+                            if (sqlType === 'VARCHAR(255)') {
+                                // Convert any existing values to string
+                                const updateQuery = `UPDATE ?? SET ?? = CAST(?? AS CHAR)`;
+                                dataTypePromises.push(
+                                    new Promise((resolve, reject) => {
+                                        connection.query(updateQuery, [categoryName, name, name], (error) => {
+                                            if (error) return reject(error);
+                                            resolve();
+                                        });
+                                    })
+                                );
+                            } else if (sqlType === 'INT') {
+                                // Convert any numeric string values to INT, set others to NULL
+                                const updateQuery = `UPDATE ?? SET ?? = CASE 
+                                    WHEN ?? REGEXP '^[0-9]+$' THEN CAST(?? AS UNSIGNED)
+                                    ELSE NULL
+                                END`;
+                                dataTypePromises.push(
+                                    new Promise((resolve, reject) => {
+                                        connection.query(updateQuery, [categoryName, name, name, name], (error) => {
+                                            if (error) return reject(error);
+                                            resolve();
+                                        });
+                                    })
+                                );
+                            }
+                    
+                            // Update the semanticType in table_metadata
+                            const updateMetaQuery = `UPDATE table_metadata SET semanticType = ? WHERE tableName = ? AND attributeName = ?`;
+                            dataTypePromises.push(
+                                new Promise((resolve, reject) => {
+                                    connection.query(updateMetaQuery, [newType, categoryName, name], (error) => {
                                         if (error) return reject(error);
                                         resolve();
                                     });
@@ -552,16 +708,23 @@ app.put('/update-category', (req, res) => {
                             );
                         });
                     }
-
-                    // Handle removing attributes
+                    
+                    
+                    
+                    // Handle removing attributes from both main table and metatable
                     if (removeAttributes && removeAttributes.length > 0) {
                         removeAttributes.forEach((attr) => {
                             const dropQuery = 'ALTER TABLE ?? DROP COLUMN ??';
+                            const metaDeleteQuery = 'DELETE FROM table_metadata WHERE tableName = ? AND attributeName = ?';
                             removePromises.push(
                                 new Promise((resolve, reject) => {
                                     connection.query(dropQuery, [categoryName, attr], (error) => {
                                         if (error) return reject(error);
-                                        resolve();
+                                        // Also remove from the metatable
+                                        connection.query(metaDeleteQuery, [categoryName, attr], (metaError) => {
+                                            if (metaError) return reject(metaError);
+                                            resolve();
+                                        });
                                     });
                                 })
                             );

@@ -167,49 +167,49 @@
 
         // Function to load category details
         function loadCategoryDetails(tableName) {
-            fetch(`http://127.0.0.1:8081/get-table-schema/${tableName}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        const attributesContainer = document.getElementById('edit-attributes-container');
-                        attributesContainer.innerHTML = ''; // Clear previous attributes
+    fetch(`http://127.0.0.1:8081/get-table-schema/${tableName}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const attributesContainer = document.getElementById('edit-attributes-container');
+                attributesContainer.innerHTML = ''; // Clear previous attributes
 
-                        result.data.forEach(attribute => {
-                            const newAttribute = document.createElement('div');
-                            newAttribute.classList.add('mb-3', 'attribute');
+                result.data.forEach(attribute => {
+                    const newAttribute = document.createElement('div');
+                    newAttribute.classList.add('mb-3', 'attribute');
 
-                            // Build the select element with the correct option selected
-                            const selectOptions = `
-                                <option value="INT" ${attribute.type.includes('int') ? 'selected' : ''}>Numeric</option>
-                                <option value="VARCHAR(255)" ${attribute.type.includes('varchar') ? 'selected' : ''}>Text</option>
-                                <option value="IMAGE" ${attribute.type === 'IMAGE' ? 'selected' : ''}>Image</option>
-                                <option value="SONG" ${attribute.type === 'SONG' ? 'selected' : ''}>Song</option>
-                            `;
+                    // Build the select element with the correct option selected
+                    const selectOptions = `
+                        <option value="INT" ${attribute.type === 'INT' ? 'selected' : ''}>Numeric</option>
+                        <option value="VARCHAR(255)" ${attribute.type === 'VARCHAR(255)' ? 'selected' : ''}>Text</option>
+                        <option value="IMAGE" ${attribute.type === 'IMAGE' ? 'selected' : ''}>Image</option>
+                        <option value="SONG" ${attribute.type === 'SONG' ? 'selected' : ''}>Song</option>
+                    `;
 
-                            newAttribute.innerHTML = `
-                                <label for="edit-attribute-name-${attribute.name}" class="form-label">Attribute Name:</label>
-                                <input type="text" class="form-control" id="edit-attribute-name-${attribute.name}" name="edit-attribute-name" value="${attribute.name}" required>
-                                <label for="edit-attribute-type-${attribute.name}" class="form-label">Attribute Type:</label>
-                                <select class="form-select" id="edit-attribute-type-${attribute.name}" name="edit-attribute-type" required>
-                                    ${selectOptions}
-                                </select>
-                                <button type="button" class="btn btn-danger mt-2 remove-edit-attribute" data-attribute-name="${attribute.name}">Remove</button>
-                            `;
-                            attributesContainer.appendChild(newAttribute);
+                    newAttribute.innerHTML = `
+                        <label for="edit-attribute-name-${attribute.name}" class="form-label">Attribute Name:</label>
+                        <input type="text" class="form-control" id="edit-attribute-name-${attribute.name}" name="edit-attribute-name" value="${attribute.name}" required>
+                        <label for="edit-attribute-type-${attribute.name}" class="form-label">Attribute Type:</label>
+                        <select class="form-select" id="edit-attribute-type-${attribute.name}" name="edit-attribute-type" required>
+                            ${selectOptions}
+                        </select>
+                        <button type="button" class="btn btn-danger mt-2 remove-edit-attribute" data-attribute-name="${attribute.name}">Remove</button>
+                    `;
+                    attributesContainer.appendChild(newAttribute);
 
-                            // Attach functionality to remove button
-                            newAttribute.querySelector('.remove-edit-attribute').addEventListener('click', () => {
-                                newAttribute.remove(); // Remove the attribute field
-                            });
-                        });
-                    } else {
-                        console.error('Failed to load category details:', result.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching category details:', error);
+                    // Attach functionality to remove button
+                    newAttribute.querySelector('.remove-edit-attribute').addEventListener('click', () => {
+                        newAttribute.remove(); // Remove the attribute field
+                    });
                 });
-        }
+            } else {
+                console.error('Failed to load category details:', result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching category details:', error);
+        });
+}
 
         // Reset modal on close
         document.getElementById('editCategoryModal').addEventListener('hidden.bs.modal', () => {
@@ -233,14 +233,18 @@ document.addEventListener('click', (event) => {
     }
 });
 
-// Handle form submission for editing a category
+
+// Within your form submission handler
 document.getElementById('edit-category-form').addEventListener('submit', (event) => {
     event.preventDefault(); // Prevent default form submission
 
     const newAttributes = [];
     const renameAttributes = [];
+    const dataTypeChanges = [];
     const attributeNames = new Set(); // To check for duplicates
     const userId = localStorage.getItem('userId'); // Ensure userId is retrieved from localStorage
+
+    let typeChangeWarning = false; // Flag for showing warning
 
     // Collect updated attribute data
     const attributeFields = document.querySelectorAll('#edit-attributes-container .attribute');
@@ -272,11 +276,18 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
             renameAttributes.push({ oldName: originalName, newName: attributeName });
         }
 
-        // Handle data type changes (if the attribute name didn't change but the type did)
+        // Handle data type changes
         if (attributeType !== originalType && attributeName === originalName) {
+            typeChangeWarning = true; // Set flag to show warning
             dataTypeChanges.push({ name: attributeName, newType: attributeType });
         }
     });
+
+    // Show warning if any data type changes are detected
+    if (typeChangeWarning) {
+        const proceed = confirm('Note: Changing the data type may cause some values to be lost or set to NULL if they are incompatible. Do you want to proceed?');
+        if (!proceed) return; // Stop if user cancels
+    }
 
     const tableName = document.getElementById('edit-category-select').value;
     const newCategoryName = document.getElementById('new-category-name').value || tableName; // Optional category name change
@@ -291,10 +302,10 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
             categoryName: tableName,
             newCategoryName,
             newAttributes,
-            removeAttributes, // Pass the removeAttributes array for attribute removal
-            renameAttributes, // Pass renameAttributes for renaming attributes
-            dataTypeChanges, // Pass dataTypeChanges for updating attribute data types
-            userId // Ensure userId is passed in the request body
+            removeAttributes, // Ensure this is defined or handled appropriately
+            renameAttributes,
+            dataTypeChanges,
+            userId
         })
     })
     .then(response => response.json())
@@ -306,10 +317,12 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
             window.location.href = 'dashboard.html'; // Redirect to dashboard after update
         } else {
             console.error('Error updating category:', result.message);
+            alert(`Error updating category: ${result.message}`);
         }
     })
     .catch(error => {
         console.error('Error updating category:', error);
+        alert('An error occurred while updating the category.');
     });
 });
 
