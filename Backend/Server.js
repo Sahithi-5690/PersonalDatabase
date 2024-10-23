@@ -438,34 +438,56 @@ app.get('/get-table-schema/:tableName', (req, res) => {
     });
 });
 
-// Endpoint to delete a row from a specific table
-app.delete('/delete-row/:tableName/:rowId', (req, res) => {
+// Endpoint to delete a row from a specific table and delete associated Google Drive files
+app.delete('/delete-row/:tableName/:rowId', async (req, res) => {
     const tableName = req.params.tableName;
     const rowId = req.params.rowId; // Assuming the row ID is passed as a URL parameter
 
-    // Check if the table exists
-    pool.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
-        if (error) {
-            console.error('Error checking table existence:', error);
-            return sendResponse(res, 500, 'Error checking table existence');
-        }
+    try {
+        // Check if the table exists
+        const results = await pool.query('SHOW TABLES LIKE ?', [tableName]);
         if (results.length === 0) {
             return sendResponse(res, 404, 'Table not found');
         }
 
-        // Prepare the delete query (assuming the primary key is named 'id')
-        const query = `DELETE FROM ${mysql.escapeId(tableName)} WHERE id = ?`;
+        // Fetch the row with the specified ID to get the file URLs
+        const rowResults = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
+        if (rowResults.length === 0) {
+            return sendResponse(res, 404, 'Row not found');
+        }
+        const rowData = rowResults[0];
 
-        pool.query(query, [rowId], (error) => {
-            if (error) {
-                console.error('Error deleting row:', error);
-                return sendResponse(res, 500, 'Error deleting row');
+        // Extract Google Drive file IDs from the URLs (assuming the files are stored in "Location" and "song" fields)
+        const fileFields = ['Location', 'song']; // Adjust this according to your actual file fields
+        for (const field of fileFields) {
+            const fileUrl = rowData[field];
+            if (fileUrl) {
+                const fileId = extractFileIdFromUrl(fileUrl);
+                try {
+                    await drive.files.delete({ fileId });
+                    console.log(`File with ID ${fileId} deleted from Google Drive`);
+                } catch (err) {
+                    console.error(`Failed to delete file with ID ${fileId}:`, err);
+                }
             }
+        }
 
-            sendResponse(res, 200, 'Row deleted successfully');
-        });
-    });
+        // Delete the row from the database
+        const deleteQuery = `DELETE FROM ${mysql.escapeId(tableName)} WHERE id = ?`;
+        await pool.query(deleteQuery, [rowId]);
+        sendResponse(res, 200, 'Row and associated files deleted successfully');
+    } catch (error) {
+        console.error('Error deleting row and files:', error);
+        return sendResponse(res, 500, 'Error deleting row and associated files');
+    }
 });
+
+// Function to extract the file ID from a Google Drive URL
+function extractFileIdFromUrl(fileUrl) {
+    const match = fileUrl.match(/\/d\/(.+?)\/view/);
+    return match ? match[1] : null;
+}
+
 
 // Updated endpoint to delete a table, ensuring the user exists
 app.delete('/drop-table', checkUserExists, (req, res) => {
@@ -588,30 +610,29 @@ pool.query = util.promisify(pool.query);
 
 app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
     const tableName = req.params.tableName;
-    const rowId = req.params.rowId; // Row ID to update
-    const rowData = req.body; // Non-file data
+    const rowId = req.params.rowId;
+    let rowData = req.body; // Non-file data
 
     try {
-        // Execute the query and get the result
+        // Check if the table exists
         const results = await pool.query('SHOW TABLES LIKE ?', [tableName]);
-
-        // Check if the results are empty or not
-        if (!results || results.length === 0) {
-            console.error('No tables found with that name:', tableName);
+        if (results.length === 0) {
             return sendResponse(res, 404, 'Table not found');
         }
 
-        // Proceed with your logic after ensuring results exist
-        // Prepare the update query for non-file columns
-        let columns = Object.keys(rowData); // Non-file columns
-        let values = Object.values(rowData); // Non-file values
+        // Fetch the existing row data to retain current file URLs if no new file is uploaded
+        const existingRows = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
+        const existingRow = existingRows[0];
+        if (!existingRow) {
+            return sendResponse(res, 404, 'Row not found');
+        }
 
         // Handle file uploads (if any)
         if (req.files && req.files.length > 0) {
             for (let file of req.files) {
                 const filePath = file.path;
                 const mimeType = file.mimetype;
-                const folderId = 'your_google_drive_folder_id'; // Replace with your folder ID
+                const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY'; // Replace with your folder ID
 
                 try {
                     // Upload file to Google Drive
@@ -635,9 +656,9 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
                     const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
 
                     // Add file field to rowData (e.g., song or image field)
-                    rowData[file.fieldname] = fileUrl;
-                    columns.push(file.fieldname);
-                    values.push(fileUrl);
+                    if (file.fieldname) {
+                        rowData[file.fieldname] = fileUrl;
+                    }
 
                 } catch (error) {
                     console.error('Error uploading file:', error);
@@ -646,27 +667,33 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             }
         }
 
-        // Build the SET clause dynamically for both text and file inputs
+        // Use existing file URLs if no new file is uploaded and the field is empty
+        rowData = {
+            ...existingRow, // Start with existing row data
+            ...rowData // Overwrite with new data (non-empty fields)
+        };
+
+        // Remove empty fields from the update process
+        const columns = Object.keys(rowData).filter(key => rowData[key] !== '' && rowData[key] !== undefined && rowData[key] !== null);
+        const values = columns.map(key => rowData[key]);
+
+        // Build the SET clause dynamically
         const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
         const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
 
-        // Add rowId to the values for WHERE clause
+        // Add rowId to the values for the WHERE clause
         values.push(rowId);
 
         // Execute the query
-        pool.query(query, values, (error) => {
-            if (error) {
-                console.error('Error updating row:', error);
-                return sendResponse(res, 500, 'Error updating row: ' + error.sqlMessage);
-            }
-            sendResponse(res, 200, 'Row updated successfully');
-        });
+        await pool.query(query, values);
+        sendResponse(res, 200, 'Row updated successfully');
 
     } catch (error) {
         console.error('Error processing request:', error);
         return sendResponse(res, 500, 'Internal server error');
     }
 });
+
 
 // Endpoint to get a specific row from a specific table by row ID
 app.get('/get-row/:tableName/:rowId', (req, res) => {
@@ -693,10 +720,13 @@ app.get('/get-row/:tableName/:rowId', (req, res) => {
             if (rows.length === 0) {
                 return sendResponse(res, 404, 'Row not found');
             }
-            sendResponse(res, 200, 'Row fetched successfully', rows[0]); // Send the first row only
+            
+            // Send the row data, including any file URLs like images and songs
+            sendResponse(res, 200, 'Row fetched successfully', rows[0]);
         });
     });
 });
+
 
 // Endpoint to get rows from a specific table
 app.get('/get-rows/:tableName', (req, res) => {

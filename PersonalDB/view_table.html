@@ -295,80 +295,88 @@ function renderTable(data, schema) {
             }
     
             // Load dynamic fields when adding or editing a row
-            function loadDynamicFields(rowId = null) {
-                fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
+            // Function to load dynamic fields when adding or editing a row
+function loadDynamicFields(rowId = null) {
+    fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(schema => {
+            const dynamicFields = document.getElementById('dynamic-fields');
+            dynamicFields.innerHTML = ''; // Clear existing fields
+
+            if (!schema.data || schema.data.length === 0) {
+                console.error('No schema data found:', schema);
+                return;
+            }
+
+            // Create dynamic fields based on the schema
+            schema.data.forEach(field => {
+                let fieldHTML = '';
+                
+                // Check if the field is of type IMAGE or SONG
+                if (field.type === 'IMAGE' || field.type === 'SONG') {
+                    fieldHTML = `
+                        <div class="mb-3">
+                            <label for="${field.name}" class="form-label">${field.name}</label>
+                            <input type="file" class="form-control" id="${field.name}" name="${field.name}" accept="${field.type === 'IMAGE' ? 'image/*' : 'audio/*'}">
+                            <div id="${field.name}-current"></div> <!-- Placeholder for current file link -->
+                        </div>
+                    `;
+                } else {
+                    // For other fields, use a text input
+                    fieldHTML = `
+                        <div class="mb-3">
+                            <label for="${field.name}" class="form-label">${field.name}</label>
+                            <input type="text" class="form-control" id="${field.name}" name="${field.name}">
+                        </div>
+                    `;
+                }
+                
+                dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
+            });
+
+            // If we have a rowId, fetch the row data to populate the fields
+            if (rowId) {
+                fetch(`http://127.0.0.1:8081/get-row/${encodeURIComponent(tableName)}/${rowId}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
                         return response.json();
                     })
-                    .then(schema => {
-                        const dynamicFields = document.getElementById('dynamic-fields');
-                        dynamicFields.innerHTML = ''; // Clear existing fields
-    
-                        if (!schema.data || schema.data.length === 0) {
-                            console.error('No schema data found:', schema);
-                            return;
-                        }
-    
-                        // Create dynamic fields based on the schema
-                        schema.data.forEach(field => {
-                            let fieldHTML = '';
-                            
-                            // Check if the field is of type IMAGE or SONG
-                            if (field.type === 'IMAGE' || field.type === 'SONG') {
-                                fieldHTML = `
-                                    <div class="mb-3">
-                                        <label for="${field.name}" class="form-label">${field.name}</label>
-                                        <input type="file" class="form-control" id="${field.name}" name="${field.name}" accept="${field.type === 'IMAGE' ? 'image/*' : 'audio/*'}" required>
-                                    </div>
-                                `;
-                            } else {
-                                // For other fields, use a text input
-                                fieldHTML = `
-                                    <div class="mb-3">
-                                        <label for="${field.name}" class="form-label">${field.name}</label>
-                                        <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
-                                    </div>
-                                `;
+                    .then(row => {
+                        console.log('Row data fetched:', row); // Debug log
+                        for (const field in row.data) {
+                            const inputElement = document.getElementById(field);
+                            if (inputElement && inputElement.type !== 'file') {
+                                inputElement.value = row.data[field]; // Populate input with row data
                             }
-                            
-                            dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
-                        });
-    
-                        // If we have a rowId, fetch the row data to populate the fields
-                        if (rowId) {
-                            fetch(`http://127.0.0.1:8081/get-row/${encodeURIComponent(tableName)}/${rowId}`)
-                                .then(response => {
-                                    if (!response.ok) {
-                                        throw new Error(`HTTP error! status: ${response.status}`);
-                                    }
-                                    return response.json();
-                                })
-                                .then(row => {
-                                    console.log('Row data fetched:', row); // Debug log
-                                    for (const field in row.data) {
-                                        const inputElement = document.getElementById(field);
-                                        if (inputElement && inputElement.type !== 'file') {
-                                            inputElement.value = row.data[field]; // Populate input with row data
-                                        }
-                                    }
-                                    document.getElementById('row-id').value = rowId; // Set the ID for editing
-                                    document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
-    
-                                    // Show the modal after setting values
-                                    const modal = new bootstrap.Modal(document.getElementById('rowModal'));
-                                    modal.show();
-                                })
-                                .catch(error => console.error('Error loading row data:', error));
-                        } else {
-                            document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
+
+                            // Handle file inputs by showing the current file link
+                            if (inputElement && inputElement.type === 'file' && row.data[field]) {
+                                const fileLink = `<a href="${row.data[field]}" target="_blank">View Current File</a>`;
+                                document.getElementById(`${field}-current`).innerHTML = fileLink;
+                            }
                         }
+                        document.getElementById('row-id').value = rowId; // Set the ID for editing
+                        document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
+
+                        // Show the modal after setting values
+                        const modal = new bootstrap.Modal(document.getElementById('rowModal'));
+                        modal.show();
                     })
-                    .catch(error => console.error('Error loading schema:', error));
+                    .catch(error => console.error('Error loading row data:', error));
+            } else {
+                document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
             }
-    
+        })
+        .catch(error => console.error('Error loading schema:', error));
+}
+
           // Function to close the modal
 function closeModal() {
     const modalElement = document.getElementById('rowModal');
