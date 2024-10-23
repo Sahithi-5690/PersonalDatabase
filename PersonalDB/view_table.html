@@ -291,12 +291,26 @@ function loadDynamicFields(rowId = null) {
 
             // Create dynamic fields based on the schema
             schema.data.forEach(field => {
-                const fieldHTML = `
-                    <div class="mb-3">
-                        <label for="${field.name}" class="form-label">${field.name}</label>
-                        <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
-                    </div>
-                `;
+                let fieldHTML = '';
+                
+                // Check if the field is of type IMAGE or SONG
+                if (field.type === 'IMAGE' || field.type === 'SONG') {
+                    fieldHTML = `
+                        <div class="mb-3">
+                            <label for="${field.name}" class="form-label">${field.name}</label>
+                            <input type="file" class="form-control" id="${field.name}" name="${field.name}" accept="${field.type === 'IMAGE' ? 'image/*' : 'audio/*'}" required>
+                        </div>
+                    `;
+                } else {
+                    // For other fields, use a text input
+                    fieldHTML = `
+                        <div class="mb-3">
+                            <label for="${field.name}" class="form-label">${field.name}</label>
+                            <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
+                        </div>
+                    `;
+                }
+                
                 dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
             });
 
@@ -313,7 +327,7 @@ function loadDynamicFields(rowId = null) {
                         console.log('Row data fetched:', row); // Debug log
                         for (const field in row.data) {
                             const inputElement = document.getElementById(field);
-                            if (inputElement) {
+                            if (inputElement && inputElement.type !== 'file') {
                                 inputElement.value = row.data[field]; // Populate input with row data
                             }
                         }
