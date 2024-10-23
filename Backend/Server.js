@@ -1,12 +1,117 @@
 const express = require('express');
-const mysql = require('mysql'); // Using mysql package
+const mysql = require('mysql');
 const cors = require('cors');
 const { check, validationResult } = require('express-validator');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs'); // Ensure 'fs' is required
 require('dotenv').config();
+const { google } = require('googleapis');
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // Parses JSON request bodies
+app.use(express.json());
+
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
+
+const oauth2Client = new google.auth.OAuth2(
+    CLIENT_ID,
+    CLIENT_SECRET,
+    REDIRECT_URI
+);
+
+oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+// Set the storage destination and filename
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+// Initialize multer with the correct configuration
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 1024 * 1024 * 200 } // Limit files to 200MB
+}).any(); // Use .any() to accept any number of files with any names
+
+
+// Your existing upload-file endpoint
+app.post('/upload-file', upload, async (req, res) => {
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    try {
+        const file = req.files[0]; // Use the first file uploaded
+        const filePath = file.path;
+        const mimeType = file.mimetype;
+        const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY'; // Your specific folder ID
+
+        // Upload file to the specific folder in Google Drive
+        const response = await drive.files.create({
+            requestBody: {
+                name: file.originalname, // File name on Google Drive
+                mimeType: mimeType,
+                parents: [folderId], // Specify the folder ID here
+            },
+            media: {
+                mimeType: mimeType,
+                body: fs.createReadStream(filePath), // Read the file from local storage
+            },
+        });
+
+        // After upload, delete the file from local storage
+        fs.unlinkSync(filePath);
+
+        // Get the uploaded file's ID and construct a URL
+        const fileId = response.data.id;
+        const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+
+        // Save the file URL to the database (use dynamic field names)
+        const tableName = req.body.tableName;
+        const attributeName = req.body.attributeName;
+        const rowId = req.body.rowId;
+
+        if (tableName && attributeName) {
+            let query;
+            if (rowId) {
+                // Update existing row
+                query = `UPDATE ?? SET ?? = ? WHERE id = ?`;
+                pool.query(query, [tableName, attributeName, fileUrl, rowId], (error) => {
+                    if (error) {
+                        console.error('Error updating row:', error);
+                        return res.status(500).json({ success: false, message: 'Error updating row: ' + error.message });
+                    }
+                    res.status(200).json({ success: true, message: 'File uploaded and updated successfully', fileUrl });
+                });
+            } else {
+                // Insert new row
+                query = `INSERT INTO ?? (??) VALUES (?)`;
+                pool.query(query, [tableName, attributeName, fileUrl], (error) => {
+                    if (error) {
+                        console.error('Error inserting row:', error);
+                        return res.status(500).json({ success: false, message: 'Error inserting row: ' + error.message });
+                    }
+                    res.status(200).json({ success: true, message: 'File uploaded and inserted successfully', fileUrl });
+                });
+            }
+        } else {
+            res.status(400).json({ success: false, message: 'Missing table name or attribute name' });
+        }
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        res.status(500).json({ success: false, message: 'Error uploading file to Google Drive' });
+    }
+});
+
 
 // Database connection pool setup
 const pool = mysql.createPool({

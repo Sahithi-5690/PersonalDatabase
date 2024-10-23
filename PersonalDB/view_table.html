@@ -114,11 +114,16 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="row-form">
-                        <div id="dynamic-fields"></div> <!-- Dynamic fields will be added here -->
-                        <input type="hidden" id="row-id" name="id"> <!-- Hidden input for ID (only used for editing) -->
+                    <form id="row-form" enctype="multipart/form-data">
+                        <div id="dynamic-fields"></div>
+                        <input type="hidden" id="row-id" name="id">
+                    
+                        <!-- Add this section for file uploads -->
+                        
+                    
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
+                    
                 </div>
             </div>
         </div>
@@ -132,29 +137,29 @@
                 window.location.href = 'index.html';
                 return;
             }
-
+    
             const params = new URLSearchParams(window.location.search);
             const tableName = params.get('table');
-
+    
             if (!tableName) {
                 document.getElementById('card-details').innerHTML = 'No table specified.';
                 return;
             }
-
+    
             document.getElementById('table-title').textContent = `${tableName} Category`;
-
+    
             // Load category list
             loadCategoryList(userId);
-
-            // Load table data
-            loadTableData(tableName);
-
+    
+            // Load table data along with schema metadata
+            loadTableDataAndMetadata(tableName);
+    
             // Load dynamic fields when opening the modal
             document.getElementById('add-row-button').addEventListener('click', () => {
                 loadDynamicFields(); // Load dynamic fields for new row
                 document.getElementById('row-id').value = ''; // Reset the hidden ID field
             });
-
+    
             // Function to load category list
             function loadCategoryList(userId) {
                 fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
@@ -162,12 +167,12 @@
                     .then(tables => {
                         const dropdownMenu = document.getElementById('dropdown-menu');
                         dropdownMenu.innerHTML = '';
-
+    
                         if (!Array.isArray(tables.data)) {
                             console.error('Expected tables to be an array', tables);
                             return;
                         }
-
+    
                         tables.data.forEach(table => {
                             const listItem = document.createElement('li');
                             const linkItem = document.createElement('a');
@@ -180,223 +185,231 @@
                     })
                     .catch(error => console.error('Error loading categories:', error));
             }
-
-            // Function to load table data
-            function loadTableData(tableName) {
-                fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log(data); // Log the data to see what you receive
-                        if (!data.data || data.data.length === 0) {
-                            document.getElementById('card-details').innerHTML = 'No data found for this table.';
-                            return;
-                        }
-                        renderTable(data.data);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching table data:', error);
-                        document.getElementById('card-details').innerHTML = 'Error fetching table data: ' + error.message;
-                    });
+    
+            // Load table data along with schema metadata
+            function loadTableDataAndMetadata(tableName) {
+                Promise.all([
+                    fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`).then(response => response.json()),
+                    fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`).then(response => response.json())
+                ])
+                .then(([dataResponse, schemaResponse]) => {
+                    if (!dataResponse.data || dataResponse.data.length === 0) {
+                        document.getElementById('card-details').innerHTML = 'No data found for this table.';
+                        return;
+                    }
+                    if (!schemaResponse.data || schemaResponse.data.length === 0) {
+                        console.error('No schema data found for this table.');
+                        return;
+                    }
+                    renderTable(dataResponse.data, schemaResponse.data);
+                })
+                .catch(error => {
+                    console.error('Error loading table data or metadata:', error);
+                    document.getElementById('card-details').innerHTML = 'Error loading data: ' + error.message;
+                });
             }
-
+    
             // Function to render table data in a tabular form
-            function renderTable(data) {
-                let tableHTML = `
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th class="hidden">ID</th>
-                                ${Object.keys(data[0]).map(key => key !== 'id' ? `<th>${key}</th>` : '').join('')}
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
+            // Function to render table data in a tabular form
+function renderTable(data, schema) {
+    let tableHTML = `
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th class="hidden">ID</th>
+                    ${Object.keys(data[0]).map(key => key !== 'id' ? `<th>${key}</th>` : '').join('')}
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-                data.forEach(row => {
-                    tableHTML += `
-                        <tr>
-                            <td class="hidden">${row.id}</td>
-                            ${Object.keys(row).map(key => key !== 'id' ? `<td>${row[key]}</td>` : '').join('')}
-                            <td>
-                                <button class="btn btn-warning btn-sm edit-row" data-id="${row.id}">Edit</button>
-                                <button class="btn btn-danger btn-sm delete-row" data-id="${row.id}">Delete</button>
-                            </td>
-                        </tr>
-                    `;
-                });
+    data.forEach(row => {
+        tableHTML += `
+            <tr>
+                <td class="hidden">${row.id}</td>
+                ${Object.keys(row).map(key => {
+                    if (key !== 'id') {
+                        const value = row[key];
+                        // Check if the value is a Google Drive link
+                        if (value && typeof value === 'string' && value.startsWith('https://drive.google.com/')) {
+                            // Display as a clickable link to the Google Drive file
+                            return `<td><a href="${value}" target="_blank">View File</a></td>`;
+                        }
+                        return `<td>${value}</td>`;
+                    }
+                    return '';
+                }).join('')}
+                <td>
+                    <button class="btn btn-warning btn-sm edit-row" data-id="${row.id}">Edit</button>
+                    <button class="btn btn-danger btn-sm delete-row" data-id="${row.id}">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
 
-                tableHTML += `
-                        </tbody>
-                    </table>
-                `;
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
 
-                document.getElementById('card-details').innerHTML = tableHTML;
+    document.getElementById('card-details').innerHTML = tableHTML;
 
-                // Add event listeners for Edit/Delete buttons
-                document.querySelectorAll('.edit-row').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const rowId = button.getAttribute('data-id');
-                        loadDynamicFields(rowId); // Load dynamic fields for editing
-                    });
-                });
-
-                document.querySelectorAll('.delete-row').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const rowId = button.getAttribute('data-id');
-                        deleteRow(rowId, tableName);
-                    });
-                });
-            }
-
-            function deleteRow(rowId, tableName) {
-    if (confirm('Are you sure you want to delete this row?')) {
-        fetch(`http://127.0.0.1:8081/delete-row/${tableName}/${rowId}`, {
-            method: 'DELETE'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(result => {
-            console.log('Row deleted:', result);
-            loadTableData(tableName); // Reload table data after deletion
-        })
-        .catch(error => {
-            console.error('Error deleting row:', error);
+    // Add event listeners for Edit/Delete buttons
+    document.querySelectorAll('.edit-row').forEach(button => {
+        button.addEventListener('click', () => {
+            const rowId = button.getAttribute('data-id');
+            loadDynamicFields(rowId); // Load dynamic fields for editing
         });
-    }
+    });
+
+    document.querySelectorAll('.delete-row').forEach(button => {
+        button.addEventListener('click', () => {
+            const rowId = button.getAttribute('data-id');
+            deleteRow(rowId, tableName);
+        });
+    });
 }
 
-
-function loadDynamicFields(rowId = null) {
-    // Fetch the table schema first
-    fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(schema => {
-            const dynamicFields = document.getElementById('dynamic-fields');
-            dynamicFields.innerHTML = ''; // Clear existing fields
-
-            if (!schema.data || schema.data.length === 0) {
-                console.error('No schema data found:', schema);
-                return;
-            }
-
-            // Create dynamic fields based on the schema
-            schema.data.forEach(field => {
-                let fieldHTML = '';
-                
-                // Check if the field is of type IMAGE or SONG
-                if (field.type === 'IMAGE' || field.type === 'SONG') {
-                    fieldHTML = `
-                        <div class="mb-3">
-                            <label for="${field.name}" class="form-label">${field.name}</label>
-                            <input type="file" class="form-control" id="${field.name}" name="${field.name}" accept="${field.type === 'IMAGE' ? 'image/*' : 'audio/*'}" required>
-                        </div>
-                    `;
-                } else {
-                    // For other fields, use a text input
-                    fieldHTML = `
-                        <div class="mb-3">
-                            <label for="${field.name}" class="form-label">${field.name}</label>
-                            <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
-                        </div>
-                    `;
+    
+            // Function to delete a row
+            function deleteRow(rowId, tableName) {
+                if (confirm('Are you sure you want to delete this row?')) {
+                    fetch(`http://127.0.0.1:8081/delete-row/${tableName}/${rowId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Error: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(result => {
+                        console.log('Row deleted:', result);
+                        loadTableDataAndMetadata(tableName); // Reload table data after deletion
+                    })
+                    .catch(error => {
+                        console.error('Error deleting row:', error);
+                    });
                 }
-                
-                dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
-            });
-
-            // If we have a rowId, fetch the row data to populate the fields
-            if (rowId) {
-                fetch(`http://127.0.0.1:8081/get-row/${encodeURIComponent(tableName)}/${rowId}`)
+            }
+    
+            // Load dynamic fields when adding or editing a row
+            function loadDynamicFields(rowId = null) {
+                fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
                         return response.json();
                     })
-                    .then(row => {
-                        console.log('Row data fetched:', row); // Debug log
-                        for (const field in row.data) {
-                            const inputElement = document.getElementById(field);
-                            if (inputElement && inputElement.type !== 'file') {
-                                inputElement.value = row.data[field]; // Populate input with row data
-                            }
+                    .then(schema => {
+                        const dynamicFields = document.getElementById('dynamic-fields');
+                        dynamicFields.innerHTML = ''; // Clear existing fields
+    
+                        if (!schema.data || schema.data.length === 0) {
+                            console.error('No schema data found:', schema);
+                            return;
                         }
-                        document.getElementById('row-id').value = rowId; // Set the ID for editing
-                        document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
-
-                        // Show the modal after setting values
-                        const modal = new bootstrap.Modal(document.getElementById('rowModal'));
-                        modal.show();
+    
+                        // Create dynamic fields based on the schema
+                        schema.data.forEach(field => {
+                            let fieldHTML = '';
+                            
+                            // Check if the field is of type IMAGE or SONG
+                            if (field.type === 'IMAGE' || field.type === 'SONG') {
+                                fieldHTML = `
+                                    <div class="mb-3">
+                                        <label for="${field.name}" class="form-label">${field.name}</label>
+                                        <input type="file" class="form-control" id="${field.name}" name="${field.name}" accept="${field.type === 'IMAGE' ? 'image/*' : 'audio/*'}" required>
+                                    </div>
+                                `;
+                            } else {
+                                // For other fields, use a text input
+                                fieldHTML = `
+                                    <div class="mb-3">
+                                        <label for="${field.name}" class="form-label">${field.name}</label>
+                                        <input type="text" class="form-control" id="${field.name}" name="${field.name}" required>
+                                    </div>
+                                `;
+                            }
+                            
+                            dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
+                        });
+    
+                        // If we have a rowId, fetch the row data to populate the fields
+                        if (rowId) {
+                            fetch(`http://127.0.0.1:8081/get-row/${encodeURIComponent(tableName)}/${rowId}`)
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP error! status: ${response.status}`);
+                                    }
+                                    return response.json();
+                                })
+                                .then(row => {
+                                    console.log('Row data fetched:', row); // Debug log
+                                    for (const field in row.data) {
+                                        const inputElement = document.getElementById(field);
+                                        if (inputElement && inputElement.type !== 'file') {
+                                            inputElement.value = row.data[field]; // Populate input with row data
+                                        }
+                                    }
+                                    document.getElementById('row-id').value = rowId; // Set the ID for editing
+                                    document.getElementById('rowModalLabel').textContent = 'Edit Row'; // Change modal title
+    
+                                    // Show the modal after setting values
+                                    const modal = new bootstrap.Modal(document.getElementById('rowModal'));
+                                    modal.show();
+                                })
+                                .catch(error => console.error('Error loading row data:', error));
+                        } else {
+                            document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
+                        }
                     })
-                    .catch(error => console.error('Error loading row data:', error));
-            } else {
-                document.getElementById('rowModalLabel').textContent = 'Add New Row'; // Reset modal title
+                    .catch(error => console.error('Error loading schema:', error));
             }
-        })
-        .catch(error => console.error('Error loading schema:', error));
-}
-
-
-
-document.querySelectorAll('.edit-row').forEach(button => {
-    button.addEventListener('click', () => {
-        const rowId = button.getAttribute('data-id');
-        loadDynamicFields(rowId); // Call the updated function with the rowId
-    });
-});
-
-
-
-// Form submit handler
-document.getElementById('row-form').addEventListener('submit', (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const rowId = formData.get('id');
-    const method = rowId ? 'PUT' : 'POST'; // Determine method based on presence of ID
-    const url = rowId 
-        ? `http://127.0.0.1:8081/edit-row/${tableName}/${rowId}` // Corrected endpoint for editing
-        : `http://127.0.0.1:8081/save-row/${encodeURIComponent(tableName)}`;
-
-    // Convert FormData to a plain object for easier debugging
-    const data = {};
-    formData.forEach((value, key) => {
-        data[key] = value;
-    });
-
-    // Log the data being sent
-    console.log('Data to send:', data);
-
-    fetch(url, {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json', // Specify JSON content type
-        },
-        body: JSON.stringify(data) // Send data as JSON
-    })
-    .then(response => response.json())
-    .then(result => {
-        console.log('Row saved:', result);
-        loadTableData(tableName); // Reload table data after saving
-        const modal = bootstrap.Modal.getInstance(document.getElementById('rowModal'));
-        modal.hide(); // Close the modal
-    })
-    .catch(error => {
-        console.error('Error saving row:', error);
-    });
-});
-
-
-
+    
+            // Form submit handler for saving a row
+            document.getElementById('row-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+    
+                const formData = new FormData(event.target);
+                const rowId = formData.get('id');
+                const tableName = new URLSearchParams(window.location.search).get('table');
+    
+                const fileField = Array.from(formData.entries()).find(([key, value]) => value instanceof File);
+                if (fileField) {
+                    const attributeName = fileField[0];  // Get the attribute (column) name for the file
+    
+                    formData.append('tableName', tableName);
+                    formData.append('attributeName', attributeName);
+                    if (rowId) {
+                        formData.append('rowId', rowId);
+                    }
+    
+                    const url = `http://localhost:8081/upload-file`;
+    
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            body: formData,
+                        });
+    
+                        const result = await response.json();
+                        if (result.success) {
+                            console.log('File uploaded successfully:', result.fileUrl);
+                            loadTableDataAndMetadata(tableName); // Reload table data to show the updated entry
+                        } else {
+                            console.error('Error uploading file:', result.message);
+                        }
+                    } catch (error) {
+                        console.error('Error submitting form:', error);
+                    }
+                } else {
+                    console.error('No file field found in form data');
+                }
+            });
+    
             // Logout functionality
             document.getElementById('logout').addEventListener('click', () => {
                 localStorage.removeItem('userId');
@@ -404,6 +417,7 @@ document.getElementById('row-form').addEventListener('submit', (event) => {
             });
         });
     </script>
+    
 </body>
 
 </html>
