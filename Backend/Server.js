@@ -57,10 +57,10 @@ app.post('/upload-file', upload, async (req, res) => {
 
     try {
         let query;
-        let fileUpdates = {}; // To store the file URLs for each attribute
+        let fieldUpdates = {}; // To store both non-file and file inputs
         let updateValues = []; // To hold the query parameters dynamically
         let updateQuery = ''; // To build the dynamic update query
-        
+
         // Loop through each file and handle its upload
         for (let file of req.files) {
             const filePath = file.path;
@@ -90,8 +90,8 @@ app.post('/upload-file', upload, async (req, res) => {
 
                 const attributeName = file.fieldname; // Use fieldname to get the correct attribute
 
-                // Add to file updates
-                fileUpdates[attributeName] = fileUrl;
+                // Add the file URL to field updates
+                fieldUpdates[attributeName] = fileUrl;
 
             } catch (error) {
                 // Ensure the file is deleted even in case of an error
@@ -102,14 +102,22 @@ app.post('/upload-file', upload, async (req, res) => {
             }
         }
 
+        // Add non-file inputs (from req.body) to the fieldUpdates object
+        for (let [key, value] of Object.entries(req.body)) {
+            // Exclude the table name and row ID from field updates
+            if (key !== 'tableName' && key !== 'rowId') {
+                fieldUpdates[key] = value; // Add the non-file inputs to the field updates
+            }
+        }
+
         // Check if rowId exists - update the existing row
         if (rowId) {
             updateQuery = `UPDATE ?? SET `;
             let setClauses = [];
 
-            for (let [attributeName, fileUrl] of Object.entries(fileUpdates)) {
+            for (let [attributeName, attributeValue] of Object.entries(fieldUpdates)) {
                 setClauses.push(`?? = ?`);
-                updateValues.push(attributeName, fileUrl);
+                updateValues.push(attributeName, attributeValue);
             }
 
             updateQuery += setClauses.join(', ') + ` WHERE id = ?`;
@@ -120,12 +128,12 @@ app.post('/upload-file', upload, async (req, res) => {
                     console.error('Error updating row:', error);
                     return res.status(500).json({ success: false, message: 'Error updating row: ' + error.message });
                 }
-                res.status(200).json({ success: true, message: 'Files uploaded and updated successfully', fileUpdates });
+                res.status(200).json({ success: true, message: 'Files and data uploaded and updated successfully', fieldUpdates });
             });
         } else {
-            // If rowId does not exist, insert a new row with both attributes
-            const columns = Object.keys(fileUpdates);
-            const values = Object.values(fileUpdates);
+            // If rowId does not exist, insert a new row with both non-file and file inputs
+            const columns = Object.keys(fieldUpdates);
+            const values = Object.values(fieldUpdates);
 
             query = `INSERT INTO ?? (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
 
@@ -134,7 +142,7 @@ app.post('/upload-file', upload, async (req, res) => {
                     console.error('Error inserting row:', error);
                     return res.status(500).json({ success: false, message: 'Error inserting row: ' + error.message });
                 }
-                res.status(200).json({ success: true, message: 'Files uploaded and inserted successfully', fileUpdates });
+                res.status(200).json({ success: true, message: 'Files and data uploaded and inserted successfully', fieldUpdates });
             });
         }
     } catch (error) {
@@ -142,7 +150,6 @@ app.post('/upload-file', upload, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error uploading file to Google Drive' });
     }
 });
-
 
 // Database connection pool setup
 const pool = mysql.createPool({
@@ -574,32 +581,79 @@ app.post('/save-row/:tableName', (req, res) => {
     });
 });
 
-// Endpoint to edit a row in a specific table
-app.put('/edit-row/:tableName/:rowId', (req, res) => {
-    const tableName = req.params.tableName;
-    const rowId = req.params.rowId; // Assuming the row ID is passed as a URL parameter
-    const rowData = req.body; // Data to update
+const util = require('util');
 
-    // Check if the table exists
-    pool.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
-        if (error) {
-            console.error('Error checking table existence:', error);
-            return sendResponse(res, 500, 'Error checking table existence');
-        }
-        if (results.length === 0) {
-            console.error('Table not found:', tableName);
+// Promisify the pool.query method to work with async/await
+pool.query = util.promisify(pool.query);
+
+app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
+    const tableName = req.params.tableName;
+    const rowId = req.params.rowId; // Row ID to update
+    const rowData = req.body; // Non-file data
+
+    try {
+        // Execute the query and get the result
+        const results = await pool.query('SHOW TABLES LIKE ?', [tableName]);
+
+        // Check if the results are empty or not
+        if (!results || results.length === 0) {
+            console.error('No tables found with that name:', tableName);
             return sendResponse(res, 404, 'Table not found');
         }
 
-        // Prepare the update query
-        const columns = Object.keys(rowData);
-        const values = Object.values(rowData);
-        const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', '); // Create SET clause
-        const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`; // Assuming the primary key is named 'id'
+        // Proceed with your logic after ensuring results exist
+        // Prepare the update query for non-file columns
+        let columns = Object.keys(rowData); // Non-file columns
+        let values = Object.values(rowData); // Non-file values
 
-        // Include rowId in the values for the query
+        // Handle file uploads (if any)
+        if (req.files && req.files.length > 0) {
+            for (let file of req.files) {
+                const filePath = file.path;
+                const mimeType = file.mimetype;
+                const folderId = 'your_google_drive_folder_id'; // Replace with your folder ID
+
+                try {
+                    // Upload file to Google Drive
+                    const response = await drive.files.create({
+                        requestBody: {
+                            name: file.originalname,
+                            mimeType: mimeType,
+                            parents: [folderId],
+                        },
+                        media: {
+                            mimeType: mimeType,
+                            body: fs.createReadStream(filePath),
+                        },
+                    });
+
+                    // Delete the local file after upload
+                    fs.unlinkSync(filePath);
+
+                    // Get the uploaded file's ID and construct a URL
+                    const fileId = response.data.id;
+                    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+
+                    // Add file field to rowData (e.g., song or image field)
+                    rowData[file.fieldname] = fileUrl;
+                    columns.push(file.fieldname);
+                    values.push(fileUrl);
+
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    return res.status(500).json({ success: false, message: 'Error uploading file to Google Drive' });
+                }
+            }
+        }
+
+        // Build the SET clause dynamically for both text and file inputs
+        const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
+        const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
+
+        // Add rowId to the values for WHERE clause
         values.push(rowId);
 
+        // Execute the query
         pool.query(query, values, (error) => {
             if (error) {
                 console.error('Error updating row:', error);
@@ -607,7 +661,11 @@ app.put('/edit-row/:tableName/:rowId', (req, res) => {
             }
             sendResponse(res, 200, 'Row updated successfully');
         });
-    });
+
+    } catch (error) {
+        console.error('Error processing request:', error);
+        return sendResponse(res, 500, 'Internal server error');
+    }
 });
 
 // Endpoint to get a specific row from a specific table by row ID
@@ -667,8 +725,6 @@ app.get('/get-rows/:tableName', (req, res) => {
 app.put('/update-category', (req, res) => {
     const { categoryName, newCategoryName, newAttributes, removeAttributes, renameAttributes, dataTypeChanges, userId } = req.body;
 
-    console.log('Incoming request data:', req.body); // For debugging
-
     pool.getConnection((err, connection) => {
         if (err) {
             console.error('Error getting database connection:', err);
@@ -682,7 +738,6 @@ app.put('/update-category', (req, res) => {
                 return sendResponse(res, 500, 'Transaction error');
             }
 
-            // Helper function to handle errors and rollback
             const handleError = (error) => {
                 connection.rollback(() => {
                     connection.release();
@@ -691,30 +746,31 @@ app.put('/update-category', (req, res) => {
                 });
             };
 
-            // Check if the new category name is already taken
-            if (newCategoryName && newCategoryName !== categoryName) {
-                const checkQuery = 'SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = ? AND table_name = ?';
-                connection.query(checkQuery, [process.env.DB_NAME, newCategoryName], (error, results) => {
-                    if (error) return handleError(error);
-                    if (results[0].count > 0) {
-                        connection.release();
-                        return sendResponse(res, 400, 'Category name already taken. Please choose a different name.');
-                    }
-                    proceedWithUpdates();
-                });
-            } else {
-                proceedWithUpdates();
-            }
-
-            // Function to proceed with updates after checks
             function proceedWithUpdates() {
                 try {
-                    // Handle adding new attributes without skipping existing attributes
+                    const attributePromises = [];
                     if (newAttributes && newAttributes.length > 0) {
-                        const attributePromises = newAttributes.map(({ name, type }) => {
-                            return new Promise((resolve, reject) => {
+                        newAttributes.forEach(({ name, type }) => {
+                            attributePromises.push(new Promise((resolve, reject) => {
                                 if (!name || !type) {
                                     return reject(new Error(`Attribute name and type cannot be empty. Provided: name=${name}, type=${type}`));
+                                }
+
+                                // Map semantic types to valid MySQL data types
+                                let sqlType;
+                                switch (type) {
+                                    case 'IMAGE':
+                                    case 'SONG':
+                                        sqlType = 'VARCHAR(255)';
+                                        break;
+                                    case 'INT':
+                                        sqlType = 'INT';
+                                        break;
+                                    case 'VARCHAR(255)':
+                                        sqlType = 'VARCHAR(255)';
+                                        break;
+                                    default:
+                                        return reject(new Error(`Invalid attribute type: ${type}`));
                                 }
 
                                 // Check if the attribute already exists
@@ -727,28 +783,28 @@ app.put('/update-category', (req, res) => {
                                     }
 
                                     // Add the new attribute if it doesn't exist
-                                    const addQuery = `ALTER TABLE ?? ADD ?? ${type}`; // Correct SQL syntax: no backticks around type
+                                    const addQuery = `ALTER TABLE ?? ADD ?? ${sqlType}`;
                                     connection.query(addQuery, [categoryName, name], (error) => {
                                         if (error) return reject(error);
-                                        resolve();
+
+                                        // Add new attribute to table_metadata
+                                        const insertMetaQuery = `INSERT INTO table_metadata (tableName, attributeName, semanticType) VALUES (?, ?, ?)`;
+                                        connection.query(insertMetaQuery, [categoryName, name, type], (metaError) => {
+                                            if (metaError) return reject(metaError);
+                                            resolve();
+                                        });
                                     });
                                 });
-                            });
+                            }));
                         });
-
-                        // Wait for all new attributes to be processed before proceeding
-                        Promise.all(attributePromises).then(() => {
-                            proceedWithOtherUpdates();
-                        }).catch(handleError);
-                    } else {
-                        proceedWithOtherUpdates();
                     }
+
+                    Promise.all(attributePromises).then(() => proceedWithOtherUpdates()).catch(handleError);
                 } catch (error) {
                     handleError(error);
                 }
             }
 
-            // Function to proceed with other updates (renaming, modifying, removing attributes, renaming category)
             function proceedWithOtherUpdates() {
                 try {
                     const renamePromises = [];
@@ -761,30 +817,35 @@ app.put('/update-category', (req, res) => {
                             if (!oldName || !newName) {
                                 throw new Error(`Attribute names cannot be empty. oldName=${oldName}, newName=${newName}`);
                             }
-                            const renameQuery = 'ALTER TABLE ?? CHANGE ?? ?? VARCHAR(255)'; // Assuming VARCHAR(255) as default type for renaming
-                            renamePromises.push(
-                                new Promise((resolve, reject) => {
-                                    connection.query(renameQuery, [categoryName, oldName, newName], (error) => {
-                                        if (error) return reject(error);
+                            const renameQuery = 'ALTER TABLE ?? CHANGE ?? ?? VARCHAR(255)';
+                            renamePromises.push(new Promise((resolve, reject) => {
+                                connection.query(renameQuery, [categoryName, oldName, newName], (error) => {
+                                    if (error) return reject(error);
+
+                                    // Update table_metadata with new attribute name
+                                    const updateMetaQuery = `UPDATE table_metadata SET attributeName = ? WHERE tableName = ? AND attributeName = ?`;
+                                    connection.query(updateMetaQuery, [newName, categoryName, oldName], (metaError) => {
+                                        if (metaError) return reject(metaError);
                                         resolve();
                                     });
-                                })
-                            );
+                                });
+                            }));
                         });
                     }
+
+                    // Handle changing attribute data types
                     if (dataTypeChanges && dataTypeChanges.length > 0) {
                         dataTypeChanges.forEach(({ name, newType }) => {
                             if (!name || !newType) {
                                 throw new Error(`Attribute name and new type cannot be empty. Provided: name=${name}, newType=${newType}`);
                             }
-                    
-                            // Determine the target SQL type
+
                             let sqlType;
                             switch (newType) {
                                 case 'IMAGE':
                                 case 'SONG':
                                 case 'VARCHAR(255)':
-                                    sqlType = 'VARCHAR(255)'; // Store as VARCHAR(255)
+                                    sqlType = 'VARCHAR(255)';
                                     break;
                                 case 'INT':
                                     sqlType = 'INT';
@@ -792,93 +853,50 @@ app.put('/update-category', (req, res) => {
                                 default:
                                     throw new Error(`Unsupported data type: ${newType}`);
                             }
-                    
-                            // First, alter the table to change the column type
+
                             const alterQuery = `ALTER TABLE ?? MODIFY ?? ${sqlType}`;
-                            dataTypePromises.push(
-                                new Promise((resolve, reject) => {
-                                    connection.query(alterQuery, [categoryName, name], (error) => {
-                                        if (error) return reject(error);
+                            dataTypePromises.push(new Promise((resolve, reject) => {
+                                connection.query(alterQuery, [categoryName, name], (error) => {
+                                    if (error) return reject(error);
+
+                                    // Update table_metadata with new semanticType
+                                    const updateMetaQuery = `UPDATE table_metadata SET semanticType = ? WHERE tableName = ? AND attributeName = ?`;
+                                    connection.query(updateMetaQuery, [newType, categoryName, name], (metaError) => {
+                                        if (metaError) return reject(metaError);
                                         resolve();
                                     });
-                                })
-                            );
-                    
-                            // Handle data conversion based on newType
-                            if (sqlType === 'VARCHAR(255)') {
-                                // Convert any existing values to string
-                                const updateQuery = `UPDATE ?? SET ?? = CAST(?? AS CHAR)`;
-                                dataTypePromises.push(
-                                    new Promise((resolve, reject) => {
-                                        connection.query(updateQuery, [categoryName, name, name], (error) => {
-                                            if (error) return reject(error);
-                                            resolve();
-                                        });
-                                    })
-                                );
-                            } else if (sqlType === 'INT') {
-                                // Convert any numeric string values to INT, set others to NULL
-                                const updateQuery = `UPDATE ?? SET ?? = CASE 
-                                    WHEN ?? REGEXP '^[0-9]+$' THEN CAST(?? AS UNSIGNED)
-                                    ELSE NULL
-                                END`;
-                                dataTypePromises.push(
-                                    new Promise((resolve, reject) => {
-                                        connection.query(updateQuery, [categoryName, name, name, name], (error) => {
-                                            if (error) return reject(error);
-                                            resolve();
-                                        });
-                                    })
-                                );
-                            }
-                    
-                            // Update the semanticType in table_metadata
-                            const updateMetaQuery = `UPDATE table_metadata SET semanticType = ? WHERE tableName = ? AND attributeName = ?`;
-                            dataTypePromises.push(
-                                new Promise((resolve, reject) => {
-                                    connection.query(updateMetaQuery, [newType, categoryName, name], (error) => {
-                                        if (error) return reject(error);
-                                        resolve();
-                                    });
-                                })
-                            );
+                                });
+                            }));
                         });
                     }
-                    
-                    
-                    
-                    // Handle removing attributes from both main table and metatable
+
+                    // Handle removing attributes
                     if (removeAttributes && removeAttributes.length > 0) {
                         removeAttributes.forEach((attr) => {
                             const dropQuery = 'ALTER TABLE ?? DROP COLUMN ??';
                             const metaDeleteQuery = 'DELETE FROM table_metadata WHERE tableName = ? AND attributeName = ?';
-                            removePromises.push(
-                                new Promise((resolve, reject) => {
-                                    connection.query(dropQuery, [categoryName, attr], (error) => {
-                                        if (error) return reject(error);
-                                        // Also remove from the metatable
-                                        connection.query(metaDeleteQuery, [categoryName, attr], (metaError) => {
-                                            if (metaError) return reject(metaError);
-                                            resolve();
-                                        });
+                            removePromises.push(new Promise((resolve, reject) => {
+                                connection.query(dropQuery, [categoryName, attr], (error) => {
+                                    if (error) return reject(error);
+
+                                    // Remove from table_metadata
+                                    connection.query(metaDeleteQuery, [categoryName, attr], (metaError) => {
+                                        if (metaError) return reject(metaError);
+                                        resolve();
                                     });
-                                })
-                            );
+                                });
+                            }));
                         });
                     }
 
-                    // Execute all renames, data type changes, and removals in parallel
                     Promise.all([...renamePromises, ...dataTypePromises, ...removePromises])
-                        .then(() => {
-                            proceedWithCategoryRename();
-                        })
+                        .then(() => proceedWithCategoryRename())
                         .catch(handleError);
                 } catch (error) {
                     handleError(error);
                 }
             }
 
-            // Handle category renaming if needed
             function proceedWithCategoryRename() {
                 if (newCategoryName && newCategoryName !== categoryName) {
                     const renameCategoryQuery = 'ALTER TABLE ?? RENAME TO ??';
@@ -891,7 +909,6 @@ app.put('/update-category', (req, res) => {
                 }
             }
 
-            // Commit the transaction
             function commitTransaction() {
                 connection.commit((err) => {
                     if (err) {
@@ -905,6 +922,8 @@ app.put('/update-category', (req, res) => {
                     sendResponse(res, 200, 'Category updated successfully');
                 });
             }
+
+            proceedWithUpdates();
         });
     });
 });

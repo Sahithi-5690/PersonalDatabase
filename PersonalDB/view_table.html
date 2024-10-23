@@ -369,47 +369,94 @@ function renderTable(data, schema) {
                     .catch(error => console.error('Error loading schema:', error));
             }
     
-            // Form submit handler for saving a row
-            document.getElementById('row-form').addEventListener('submit', async (event) => {
-                event.preventDefault();
-    
-                const formData = new FormData(event.target);
-                const rowId = formData.get('id');
-                const tableName = new URLSearchParams(window.location.search).get('table');
-    
-                const fileField = Array.from(formData.entries()).find(([key, value]) => value instanceof File);
-                if (fileField) {
-                    const attributeName = fileField[0];  // Get the attribute (column) name for the file
-    
-                    formData.append('tableName', tableName);
-                    formData.append('attributeName', attributeName);
-                    if (rowId) {
-                        formData.append('rowId', rowId);
-                    }
-    
-                    const url = `http://localhost:8081/upload-file`;
-    
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            body: formData,
-                        });
-    
-                        const result = await response.json();
-                        if (result.success) {
-                            console.log('File uploaded successfully:', result.fileUrl);
-                            loadTableDataAndMetadata(tableName); // Reload table data to show the updated entry
-                        } else {
-                            console.error('Error uploading file:', result.message);
-                        }
-                    } catch (error) {
-                        console.error('Error submitting form:', error);
-                    }
-                } else {
-                    console.error('No file field found in form data');
-                }
+          // Function to close the modal
+function closeModal() {
+    const modalElement = document.getElementById('rowModal');
+    const modal = bootstrap.Modal.getInstance(modalElement); // Get the modal instance
+    modal.hide(); // Hide the modal
+}
+
+// Form submit handler for saving a row
+document.getElementById('row-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.target); // Collect all form data
+    const rowId = formData.get('id');
+    const tableName = new URLSearchParams(window.location.search).get('table');
+
+    // Initialize an object to collect the non-file inputs
+    const textData = {};
+
+    // Loop through the form entries and separate text inputs from file inputs
+    for (let [key, value] of formData.entries()) {
+        if (value instanceof File && value.size > 0) {
+            continue; // File handling will be done later
+        } else {
+            textData[key] = value;
+        }
+    }
+
+    const hasFile = Array.from(formData.entries()).some(([key, value]) => value instanceof File && value.size > 0);
+
+    try {
+        if (hasFile) {
+            formData.append('tableName', tableName);
+            if (rowId) {
+                formData.append('rowId', rowId);
+            }
+
+            const fileUrl = `http://localhost:8081/upload-file`;
+
+            const fileResponse = await fetch(fileUrl, {
+                method: 'POST',
+                body: formData,
             });
-    
+
+            const fileResult = await fileResponse.json();
+            if (fileResult.success) {
+                console.log('Files uploaded successfully:', fileResult.fileUpdates);
+
+                if (Object.keys(textData).length > 0) {
+                    await submitTextData(rowId, tableName, textData);
+                }
+
+                loadTableDataAndMetadata(tableName); // Reload table data to show the updated entry
+                closeModal(); // Close the modal
+            } else {
+                console.error('Error uploading file:', fileResult.message);
+            }
+        } else if (Object.keys(textData).length > 0) {
+            await submitTextData(rowId, tableName, textData);
+            loadTableDataAndMetadata(tableName); // Reload table data to show the updated entry
+            closeModal(); // Close the modal
+        }
+    } catch (error) {
+        console.error('Error submitting form:', error);
+    }
+});
+
+async function submitTextData(rowId, tableName, textData) {
+    const url = rowId 
+        ? `http://localhost:8081/edit-row/${tableName}/${rowId}` 
+        : `http://localhost:8081/save-row/${tableName}`;
+    const method = rowId ? 'PUT' : 'POST'; // Use PUT for editing and POST for creating
+
+    const response = await fetch(url, {
+        method: method,  // Ensure method is PUT for editing
+        body: JSON.stringify(textData),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+        console.log('Text data saved successfully');
+    } else {
+        console.error('Error saving text data:', result.message);
+    }
+}
+
             // Logout functionality
             document.getElementById('logout').addEventListener('click', () => {
                 localStorage.removeItem('userId');
