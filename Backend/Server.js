@@ -456,19 +456,32 @@ app.delete('/delete-row/:tableName/:rowId', async (req, res) => {
             return sendResponse(res, 404, 'Row not found');
         }
         const rowData = rowResults[0];
+        console.log("Row Data:", rowData); // Log row data for inspection
 
-        // Extract Google Drive file IDs from the URLs (assuming the files are stored in "Location" and "song" fields)
-        const fileFields = ['Location', 'song']; // Adjust this according to your actual file fields
+        // Fetch the metadata to determine file fields dynamically
+        const metadataResults = await pool.query('SELECT attributeName FROM table_metadata WHERE tableName = ? AND semanticType IN (?, ?)', [tableName, 'IMAGE', 'SONG']);
+        const fileFields = metadataResults.map(meta => meta.attributeName);
+
+        console.log("File fields from metadata:", fileFields); // Log file fields dynamically retrieved
+
+        // Loop through each dynamically fetched file field and delete from Google Drive if exists
         for (const field of fileFields) {
             const fileUrl = rowData[field];
+            console.log(`Processing field: ${field}, URL: ${fileUrl}`); // Log each file field and URL
             if (fileUrl) {
                 const fileId = extractFileIdFromUrl(fileUrl);
-                try {
-                    await drive.files.delete({ fileId });
-                    console.log(`File with ID ${fileId} deleted from Google Drive`);
-                } catch (err) {
-                    console.error(`Failed to delete file with ID ${fileId}:`, err);
+                if (fileId) {
+                    try {
+                        await drive.files.delete({ fileId });
+                        console.log(`File with ID ${fileId} deleted from Google Drive`);
+                    } catch (err) {
+                        console.error(`Failed to delete file with ID ${fileId}:`, err);
+                    }
+                } else {
+                    console.error(`No valid file ID found for field: ${field}, URL: ${fileUrl}`);
                 }
+            } else {
+                console.log(`No file URL found for field: ${field}`);
             }
         }
 
@@ -481,6 +494,20 @@ app.delete('/delete-row/:tableName/:rowId', async (req, res) => {
         return sendResponse(res, 500, 'Error deleting row and associated files');
     }
 });
+
+// Function to extract the file ID from a Google Drive URL
+function extractFileIdFromUrl(fileUrl) {
+    const match = fileUrl.match(/\/d\/(.+?)\/view/);
+    return match ? match[1] : null;
+}
+
+
+
+// Function to extract the file ID from a Google Drive URL
+function extractFileIdFromUrl(fileUrl) {
+    const match = fileUrl.match(/\/d\/(.+?)\/view/);
+    return match ? match[1] : null;
+}
 
 // Function to extract the file ID from a Google Drive URL
 function extractFileIdFromUrl(fileUrl) {
