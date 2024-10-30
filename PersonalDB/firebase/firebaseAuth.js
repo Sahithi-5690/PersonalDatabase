@@ -52,6 +52,19 @@ document.getElementById('signUpForm').addEventListener('submit', async (event) =
         const data = await response.json();
         console.log('Server Response:', data);
 
+        // Show success message
+showMessage
+(
+'User created successfully'
+,
+'signUpMessage'
+);
+// Display message on the form
+alert
+(
+'User created successfully'
+);
+
         // Redirect to dashboard
         window.location.href = 'index.html';
     } catch (error) {
