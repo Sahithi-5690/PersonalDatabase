@@ -92,8 +92,8 @@ document.getElementById('signInForm').addEventListener('submit', async (event) =
         window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Sign In Error:', error);
-        showMessage('Unable to sign in: ' + error.message, 'signInMessage');
-        alert('Sign-In Error: ' + error.message); // Alert for critical errors
+        showMessage('Invalid credentials, please use valid credentials', 'signInMessage');
+        alert('Invalid credentials, please use valid credentials'); // Alert for critical errors
     }
 });
 
