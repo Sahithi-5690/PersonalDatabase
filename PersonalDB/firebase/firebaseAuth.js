@@ -89,7 +89,7 @@ document.getElementById('signInForm').addEventListener('submit', async (event) =
         console.log('User ID stored in localStorage:', localStorage.getItem('userId'));
 
         // Redirect to dashboard
-        window.location.href = 'dashboard.html';
+        window.location.href = 'index.html';
     } catch (error) {
         console.error('Sign In Error:', error);
         showMessage('Invalid credentials, please use valid credentials', 'signInMessage');
