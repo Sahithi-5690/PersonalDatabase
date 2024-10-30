@@ -53,7 +53,7 @@ document.getElementById('signUpForm').addEventListener('submit', async (event) =
         console.log('Server Response:', data);
 
         // Redirect to dashboard
-        window.location.href = 'dashboard.html';
+        window.location.href = 'index.html';
     } catch (error) {
         console.error('Sign Up Error:', error);
         showMessage('Unable to sign up: ' + error.message, 'signUpMessage');
