@@ -231,3 +231,16 @@ body {
 	background: #209dc7;
 	outline: 20px solid hsla(117, 27%, 41%, 0.6); /* green */
   }
+
+  .card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.05);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}

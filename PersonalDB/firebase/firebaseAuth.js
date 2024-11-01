@@ -52,8 +52,21 @@ document.getElementById('signUpForm').addEventListener('submit', async (event) =
         const data = await response.json();
         console.log('Server Response:', data);
 
+        // Show success message
+showMessage
+(
+'User created successfully'
+,
+'signUpMessage'
+);
+// Display message on the form
+alert
+(
+'User created successfully'
+);
+
         // Redirect to dashboard
-        window.location.href = 'dashboard.html';
+        window.location.href = 'index.html';
     } catch (error) {
         console.error('Sign Up Error:', error);
         showMessage('Unable to sign up: ' + error.message, 'signUpMessage');
@@ -92,8 +105,8 @@ document.getElementById('signInForm').addEventListener('submit', async (event) =
         window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Sign In Error:', error);
-        showMessage('Unable to sign in: ' + error.message, 'signInMessage');
-        alert('Sign-In Error: ' + error.message); // Alert for critical errors
+        showMessage('Invalid credentials, please use valid credentials', 'signInMessage');
+        alert('Invalid credentials, please use valid credentials'); // Alert for critical errors
     }
 });
 

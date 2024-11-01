@@ -1,192 +1,572 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'>
-  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" defer></script>
-  <script type="module" src="./homepage.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" defer></script>
 </head>
+
 <body>
-  <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="dashboard.html">Personal DB</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
-          </li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Category List
-            </a>
-            <ul class="dropdown-menu" id="dropdown-menu">
-              <!-- Dropdown items will be populated here -->
-            </ul>
-          </li>
-        </ul>
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item">
-            <button type="button" class="btn btn-outline-danger" id="logout" style="margin-top: 8px;">Logout</button>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </nav>
-  <div class="container" style="padding-top: 4%;">
-    <h1 class="dashboard__title">Welcome to Dashboard</h1>
-    <button type="button" class="btn btn-primary" id="add-table-btn">+ Add New Category</button>
-  </div>
-  <!-- Modal for creating a new table -->
-  <div class="modal fade" id="createTableModal" tabindex="-1" aria-labelledby="createTableModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="createTableModalLabel">Create New Category</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="create-table-form">
-            <div class="mb-3">
-              <label for="table-name" class="form-label">Category Name:</label>
-              <input type="text" class="form-control" id="table-name" name="table-name" required>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.html">Personal DB</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Category List
+                        </a>
+                        <ul class="dropdown-menu" id="dropdown-menu">
+                            <!-- Dropdown items will be populated here -->
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-outline-danger" id="logout" style="margin-top: 8px;">Logout</button>
+                    </li>
+                </ul>
             </div>
-            <div id="attributes-container">
-              <div class="mb-3 attribute">
-                <label for="attribute-name-1" class="form-label">Attribute Name:</label>
-                <input type="text" class="form-control" name="attribute-name-1" required>
-                <label for="attribute-type-1" class="form-label">Attribute Type:</label>
-                <select class="form-select" name="attribute-type-1" required>
-                  <option value="">Select Data Type</option>
-                  <option value="INT">INT</option>
-                  <option value="VARCHAR(255)">VARCHAR(255)</option>
-                  <option value="TEXT">TEXT</option>
-                  <option value="DATE">DATE</option>
-                  <option value="FLOAT">FLOAT</option>
-                  <option value="DOUBLE">DOUBLE</option>
-                  <option value="BOOLEAN">BOOLEAN</option>
-                  <option value="DATETIME">DATETIME</option>
-                </select>
-              </div>
-            </div>
-            <button type="button" class="btn btn-secondary" id="add-attribute">+ Add Attribute</button>
-            <button type="submit" class="btn btn-primary">Create Category</button>
-          </form>
         </div>
-      </div>
+    </nav>
+
+    <div class="container" style="padding-top: 4%;">
+        <h1 class="dashboard__title">Welcome to Dashboard</h1>
+        <button type="button" class="btn btn-success" id="add-table-btn" data-bs-toggle="modal" data-bs-target="#createTableModal">+ Add New Category</button>
+        <button type="button" class="btn btn-danger" id="drop-table-btn" data-bs-toggle="modal" data-bs-target="#dropTableModal">- Drop Category</button>
+        <button type="button" class="btn btn-primary" id="edit-category-btn" data-bs-toggle="modal" data-bs-target="#editCategoryModal">Edit Category</button>
     </div>
-  </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Retrieve userId from local storage
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        console.error('User Id not Found in Local storage');
-        window.location.href = 'index.html'; // Redirect to login page
-        return;
-      }
+    <!-- Modal for creating a new table -->
+    <div class="modal fade" id="createTableModal" tabindex="-1" aria-labelledby="createTableModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createTableModalLabel">Create New Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-table-form">
+                        <div class="mb-3">
+                            <label for="table-name" class="form-label">Category Name:</label>
+                            <input type="text" class="form-control" id="table-name" name="table-name" required>
+                        </div>
+                        <div id="attributes-container">
+                            <!-- Attributes will be appended here -->
+                        </div>
+                        <button type="button" class="btn btn-secondary" id="add-attribute">+ Add Attribute</button>
+                        <button type="submit" class="btn btn-primary">Create Category</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-      // Load user-specific table names into the dropdown menu
-      fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
-        .then(response => response.json())
-        .then(tables => {
-          if (Array.isArray(tables)) {
-            const dropdownMenu = document.getElementById('dropdown-menu');
-            tables.forEach(table => {
-              const li = document.createElement('li');
-              li.innerHTML = `<a class="dropdown-item" href="view_table.html?table=${table}">${table}</a>`;
-              dropdownMenu.appendChild(li);
-            });
-          } else {
-            console.error('Expected an array of tables, but received:', tables);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching tables:', error);
+    <!-- Modal for dropping a category -->
+    <div class="modal fade" id="dropTableModal" tabindex="-1" aria-labelledby="dropTableModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dropTableModalLabel">Drop Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <select class="form-select" id="drop-table-select" required>
+                        <option value="">Select Category to Drop</option>
+                        <!-- Options will be populated here -->
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="confirm-drop">Drop Category</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for editing a category -->
+    <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCategoryModalLabel">Edit Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <select class="form-select" id="edit-category-select" required>
+                        <option value="">Select Category to Edit</option>
+                        <!-- Options will be populated here -->
+                    </select>
+                    <form id="edit-category-form" style="margin-top: 1rem;">
+                        <div class="mb-3">
+                            <label for="new-category-name" class="form-label">New Category Name (Optional):</label>
+                            <input type="text" class="form-control" id="new-category-name" name="new-category-name">
+                        </div>
+                        <div id="edit-attributes-container">
+                            <!-- Existing attributes will be populated here -->
+                        </div>
+                        <button type="button" class="btn btn-secondary" id="add-edit-attribute">+ Add Attribute</button>
+                        <button type="submit" class="btn btn-primary">Update Category</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('edit-category-btn').addEventListener('click', () => {
+            loadCategoriesForEdit(); // Load categories when edit button is clicked
         });
 
-      // Show modal to add new table
-      document.getElementById('add-table-btn').addEventListener('click', () => {
-        const myModal = new bootstrap.Modal(document.getElementById('createTableModal'));
-        myModal.show();
-      });
+        // Function to load categories into the dropdown for editing
+        function loadCategoriesForEdit() {
+            const userId = localStorage.getItem('userId');
+            fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const editCategorySelect = document.getElementById('edit-category-select');
+                        editCategorySelect.innerHTML = '<option value="">Select Category to Edit</option>'; // Clear previous options
 
-      // Add new attribute input fields
-      document.getElementById('add-attribute').addEventListener('click', () => {
-        const container = document.getElementById('attributes-container');
-        const count = container.getElementsByClassName('attribute').length + 1;
+                        result.data.forEach(table => {
+                            editCategorySelect.appendChild(new Option(table, table));
+                        });
 
-        const newAttribute = document.createElement('div');
-        newAttribute.classList.add('mb-3', 'attribute');
-        newAttribute.innerHTML = `
-          <label for="attribute-name-${count}" class="form-label">Attribute Name:</label>
-          <input type="text" class="form-control" name="attribute-name-${count}" required>
-          <label for="attribute-type-${count}" class="form-label">Attribute Type:</label>
-          <select class="form-select" name="attribute-type-${count}" required>
-            <option value="">Select Data Type</option>
-            <option value="INT">INT</option>
-            <option value="VARCHAR(255)">VARCHAR(255)</option>
-            <option value="TEXT">TEXT</option>
-            <option value="DATE">DATE</option>
-            <option value="FLOAT">FLOAT</option>
-            <option value="DOUBLE">DOUBLE</option>
-            <option value="BOOLEAN">BOOLEAN</option>
-            <option value="DATETIME">DATETIME</option>
-          </select>
-        `;
-        container.appendChild(newAttribute);
-      });
-
-      // Handle form submission
-      document.getElementById('create-table-form').addEventListener('submit', event => {
-        event.preventDefault();
-
-        const form = event.target;
-        const tableName = form['table-name'].value;
-        const attributes = [];
-
-        for (let i = 1; i <= form.querySelectorAll('.attribute').length; i++) {
-          const name = form[`attribute-name-${i}`].value;
-          const type = form[`attribute-type-${i}`].value;
-          attributes.push({ name, type });
+                        // Show the modal after loading categories
+                        const myModal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+                        myModal.show();
+                    } else {
+                        console.error('Failed to load categories:', result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching categories:', error);
+                });
         }
 
-        fetch('http://127.0.0.1:8081/create-table', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ tableName, attributes, userId })
+        // Load category details when a category is selected
+        document.getElementById('edit-category-select').addEventListener('change', function () {
+            const selectedCategory = this.value;
+            if (selectedCategory) {
+                loadCategoryDetails(selectedCategory);
+            } else {
+                document.getElementById('edit-attributes-container').innerHTML = ''; // Clear attributes if no selection
+            }
+        });
+
+        // Function to load category details
+        function loadCategoryDetails(tableName) {
+    fetch(`http://127.0.0.1:8081/get-table-schema/${tableName}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const attributesContainer = document.getElementById('edit-attributes-container');
+                attributesContainer.innerHTML = ''; // Clear previous attributes
+
+                result.data.forEach(attribute => {
+                    const newAttribute = document.createElement('div');
+                    newAttribute.classList.add('mb-3', 'attribute');
+
+                    // Build the select element with the correct option selected
+                    const selectOptions = `
+                        <option value="INT" ${attribute.type === 'INT' ? 'selected' : ''}>Numeric</option>
+                        <option value="VARCHAR(255)" ${attribute.type === 'VARCHAR(255)' ? 'selected' : ''}>Text</option>
+                        <option value="IMAGE" ${attribute.type === 'IMAGE' ? 'selected' : ''}>Image</option>
+                        <option value="SONG" ${attribute.type === 'SONG' ? 'selected' : ''}>Song</option>
+                    `;
+
+                    newAttribute.innerHTML = `
+                        <label for="edit-attribute-name-${attribute.name}" class="form-label">Attribute Name:</label>
+                        <input type="text" class="form-control" id="edit-attribute-name-${attribute.name}" name="edit-attribute-name" value="${attribute.name}" required>
+                        <label for="edit-attribute-type-${attribute.name}" class="form-label">Attribute Type:</label>
+                        <select class="form-select" id="edit-attribute-type-${attribute.name}" name="edit-attribute-type" required>
+                            ${selectOptions}
+                        </select>
+                        <button type="button" class="btn btn-danger mt-2 remove-edit-attribute" data-attribute-name="${attribute.name}">Remove</button>
+                    `;
+                    attributesContainer.appendChild(newAttribute);
+
+                    // Attach functionality to remove button
+                    newAttribute.querySelector('.remove-edit-attribute').addEventListener('click', () => {
+                        newAttribute.remove(); // Remove the attribute field
+                    });
+                });
+            } else {
+                console.error('Failed to load category details:', result.message);
+            }
         })
-          .then(response => response.text())
-          .then(result => {
-            alert(result);
-            window.location.reload(); // Reload to update dropdown
-          })
-          .catch(error => {
-            console.error('Error:', error);
-          });
-      });
+        .catch(error => {
+            console.error('Error fetching category details:', error);
+        });
+}
 
-      // Logout functionality
-      document.getElementById('logout').addEventListener('click', async () => {
-        try {
-          await fetch('http://127.0.0.1:8081/logout', { method: 'POST' });
-          localStorage.removeItem('userId');
-          window.location.href = 'index.html'; // Redirect to login page
-        } catch (error) {
-          console.error('Logout Error:', error);
+        // Reset modal on close
+        document.getElementById('editCategoryModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('edit-attributes-container').innerHTML = ''; // Clear attributes on close
+            window.location.href = 'dashboard.html'; // Redirect to dashboard on close
+        });
+
+ // Global array to store removed attributes
+const removeAttributes = [];
+// Global array to store data type changes
+const dataTypeChanges = [];
+
+// Event listener to track removed attributes
+document.addEventListener('click', (event) => {
+    if (event.target.classList.contains('remove-edit-attribute')) {
+        const attributeName = event.target.dataset.attributeName;
+        if (attributeName) {
+            removeAttributes.push(attributeName); // Add removed attribute to the array
+            event.target.closest('.attribute').remove(); // Remove the attribute from the DOM
         }
-      });
+    }
+});
+
+
+// Within your form submission handler
+document.getElementById('edit-category-form').addEventListener('submit', (event) => {
+    event.preventDefault(); // Prevent default form submission
+
+    const newAttributes = [];
+    const renameAttributes = [];
+    const dataTypeChanges = [];
+    const attributeNames = new Set(); // To check for duplicates
+    const userId = localStorage.getItem('userId'); // Ensure userId is retrieved from localStorage
+
+    let typeChangeWarning = false; // Flag for showing warning
+
+    // Collect updated attribute data
+    const attributeFields = document.querySelectorAll('#edit-attributes-container .attribute');
+    attributeFields.forEach(field => {
+        const attributeName = field.querySelector('input[type="text"]').value;
+        const attributeType = field.querySelector('select').value;
+        const originalName = field.querySelector('.remove-edit-attribute').dataset.attributeName;
+        const originalType = field.querySelector('.remove-edit-attribute').dataset.attributeType; // Original type to compare changes
+
+        // Check for empty attribute names and types
+        if (!attributeName || !attributeType) {
+            alert('Attribute names and types cannot be empty.');
+            return;
+        }
+
+        // Check for duplicates
+        if (attributeNames.has(attributeName)) {
+            alert(`Attribute name "${attributeName}" is already used. Please choose a different name.`);
+            return;
+        }
+        attributeNames.add(attributeName); // Add to set if unique
+
+        // Handle new attributes (originalName is empty)
+        if (!originalName) {
+            newAttributes.push({ name: attributeName, type: attributeType });
+        } 
+        // Handle renamed attributes
+        else if (attributeName !== originalName) {
+            renameAttributes.push({ oldName: originalName, newName: attributeName });
+        }
+
+        // Handle data type changes
+        if (attributeType !== originalType && attributeName === originalName) {
+            typeChangeWarning = true; // Set flag to show warning
+            dataTypeChanges.push({ name: attributeName, newType: attributeType });
+        }
     });
-  </script>
+
+    // Show warning if any data type changes are detected
+    if (typeChangeWarning) {
+        const proceed = confirm('Note: Changing the data type may cause some values to be lost or set to NULL if they are incompatible. Do you want to proceed?');
+        if (!proceed) return; // Stop if user cancels
+    }
+
+    const tableName = document.getElementById('edit-category-select').value;
+    const newCategoryName = document.getElementById('new-category-name').value || tableName; // Optional category name change
+
+    // Send request to update the category
+    fetch(`http://127.0.0.1:8081/update-category`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            categoryName: tableName,
+            newCategoryName,
+            newAttributes,
+            removeAttributes, // Ensure this is defined or handled appropriately
+            renameAttributes,
+            dataTypeChanges,
+            userId
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Category updated successfully');
+            const myModal = bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'));
+            myModal.hide();
+            window.location.href = 'dashboard.html'; // Redirect to dashboard after update
+        } else {
+            console.error('Error updating category:', result.message);
+            alert(`Error updating category: ${result.message}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating category:', error);
+        alert('An error occurred while updating the category.');
+    });
+});
+
+
+
+        // Adding functionality to dynamically add new attributes
+        document.getElementById('add-edit-attribute').addEventListener('click', function () {
+            const attributesContainer = document.getElementById('edit-attributes-container');
+            const attributeCount = attributesContainer.children.length + 1; // Track the number of attributes
+
+            const newAttribute = document.createElement('div');
+            newAttribute.classList.add('mb-3', 'attribute');
+            newAttribute.innerHTML = `
+                <label for="new-attribute-name-${attributeCount}" class="form-label">Attribute Name:</label>
+                <input type="text" class="form-control" id="new-attribute-name-${attributeCount}" required>
+                <label for="new-attribute-type-${attributeCount}" class="form-label">Attribute Type:</label>
+                <select class="form-select" id="new-attribute-type-${attributeCount}" required>
+                    <option value="INT">Numeric</option>
+                    <option value="VARCHAR(255)">Text</option>
+                    <option value="IMAGE">Image</option>
+                    <option value="SONG">Song</option>
+                </select>
+                <button type="button" class="btn btn-danger mt-2 remove-edit-attribute" data-attribute-name="">Remove</button>
+            `;
+
+            // Append new attribute to the container
+            attributesContainer.appendChild(newAttribute);
+
+            // Attach remove functionality
+            newAttribute.querySelector('.remove-edit-attribute').addEventListener('click', function () {
+                newAttribute.remove(); // Remove the attribute field
+            });
+        });
+
+        // Function to load user-specific table names into the dropdown menu
+        function loadUserTables() {
+            const userId = localStorage.getItem('userId');
+            fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const dropdownMenu = document.getElementById('dropdown-menu');
+                        dropdownMenu.innerHTML = ''; // Clear any existing dropdown items
+
+                        // Populate dropdown menu for categories
+                        const dropTableSelect = document.getElementById('drop-table-select');
+                        dropTableSelect.innerHTML = ''; // Clear previous options
+                        dropTableSelect.appendChild(new Option('Select Category to Drop', ''));
+
+                        result.data.forEach(table => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<a class="dropdown-item" href="view_table.html?table=${table}">${table}</a>`;
+                            dropdownMenu.appendChild(li);
+
+                            // Add option to drop select
+                            dropTableSelect.appendChild(new Option(table, table));
+                        });
+                    } else {
+                        console.error('Failed to load tables:', result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching tables:', error);
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                console.error('User ID not found in local storage');
+                window.location.href = 'index.html'; // Redirect to login page
+                return;
+            }
+
+            loadUserTables(); // Load tables when page loads
+
+            let attributeCount = 0; // Start counting attributes from 0
+
+            // Function to create a new attribute input field
+            function createAttributeField() {
+                attributeCount++; // Increment the attribute count
+
+                const newAttribute = document.createElement('div');
+                newAttribute.classList.add('mb-3', 'attribute');
+                newAttribute.innerHTML = `
+                    <label for="attribute-name-${attributeCount}" class="form-label">Attribute Name:</label>
+                    <input type="text" class="form-control" id="attribute-name-${attributeCount}" name="attribute-name-${attributeCount}" required>
+                    <label for="attribute-type-${attributeCount}" class="form-label">Attribute Type:</label>
+                    <select class="form-select" id="attribute-type-${attributeCount}" name="attribute-type-${attributeCount}" required>
+                        <option value="">Select Data Type</option>
+                        <option value="INT">Numeric</option>
+                        <option value="VARCHAR(255)">Text</option>
+                        <option value="IMAGE">Image</option>
+                        <option value="SONG">Song</option>
+                    </select>
+                    <button type="button" class="btn btn-danger mt-2 remove-attribute" data-attribute-id="${attributeCount}">Remove</button>
+                `;
+                document.getElementById('attributes-container').appendChild(newAttribute); // Append the new attribute to the container
+
+                // Attach the remove button functionality
+                newAttribute.querySelector('.remove-attribute').addEventListener('click', () => {
+                    newAttribute.remove(); // Remove the attribute field
+                    attributeCount--; // Decrement attribute count
+                });
+            }
+
+            // Attach the event listener for the "Add Attribute" button
+            document.getElementById('add-attribute').addEventListener('click', createAttributeField);
+
+            // Reset the form and container when modal is opened
+            const resetModal = () => {
+                document.getElementById('create-table-form').reset();
+                document.getElementById('attributes-container').innerHTML = '';
+                attributeCount = 0; // Reset attribute count
+            };
+
+            // Show modal to add new table
+            document.getElementById('add-table-btn').addEventListener('click', () => {
+                resetModal();
+                const myModal = new bootstrap.Modal(document.getElementById('createTableModal'));
+                myModal.show();
+            });
+
+            // Reset modal on close and redirect to dashboard
+            document.getElementById('createTableModal').addEventListener('hidden.bs.modal', () => {
+                resetModal(); // Reset the form fields when modal is closed
+                window.location.href = 'dashboard.html'; // Redirect to dashboard
+            });
+
+            // Handle form submission for creating a new category
+            document.getElementById('create-table-form').addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevent the default form submission
+
+                const tableName = document.getElementById('table-name').value;
+                const attributes = [];
+                const attributeNames = new Set(); // To check for duplicates
+
+                // Collect attribute data
+                for (let i = 1; i <= attributeCount; i++) {
+                    const attributeName = document.getElementById(`attribute-name-${i}`)?.value;
+                    const attributeType = document.getElementById(`attribute-type-${i}`)?.value;
+
+                    if (attributeName && attributeType) {
+                        // Check for duplicate attribute names
+                        if (attributeNames.has(attributeName)) {
+                            alert(`Attribute name "${attributeName}" is already used. Please choose a different name.`);
+                            return;
+                        }
+                        attributeNames.add(attributeName); // Add to set if unique
+                        attributes.push({ name: attributeName, type: attributeType });
+                    }
+                }
+
+                // Check if category name already exists
+                fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            const existingCategoryNames = result.data.map(table => table.toLowerCase());
+                            if (existingCategoryNames.includes(tableName.toLowerCase())) {
+                                alert('Category name already exists. Please choose a different category name.');
+                                return;
+                            }
+
+                            // Send request to create a new category
+                            fetch(`http://127.0.0.1:8081/create-table`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ tableName, attributes, userId })
+                            })
+                            .then(response => response.json())
+                            .then(result => {
+                                if (result.success) {
+                                    alert('Category created successfully');
+                                    resetModal(); // Reset modal fields
+                                    loadUserTables(); // Reload tables in the dropdown
+
+                                    // Close the modal after successful creation
+                                    const myModal = bootstrap.Modal.getInstance(document.getElementById('createTableModal'));
+                                    myModal.hide();
+
+                                    // Redirect to dashboard after modal is closed
+                                    window.location.href = 'dashboard.html'; // Redirect to dashboard
+                                } else {
+                                    console.error('Error creating category:', result.message);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error creating category:', error);
+                            });
+                        } else {
+                            console.error('Failed to load existing categories:', result.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching existing categories:', error);
+                    });
+            });
+
+          // Handle category dropping
+document.getElementById('confirm-drop').addEventListener('click', () => {
+    const categoryToDrop = document.getElementById('drop-table-select').value;
+    if (!categoryToDrop) {
+        alert('Please select a category to drop.');
+        return;
+    }
+
+    // Add a confirmation prompt
+    const userConfirmed = confirm(`Are you sure you want to drop the category: ${categoryToDrop}?`);
+    
+    // Proceed only if the user confirms
+    if (userConfirmed) {
+        fetch(`http://127.0.0.1:8081/drop-table`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ tableName: categoryToDrop, userId })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('Category dropped successfully');
+                loadUserTables(); // Reload tables in the dropdown
+            } else {
+                console.error('Error dropping category:', result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error dropping category:', error);
+        });
+    }
+});
+
+        });
+
+        // Logout functionality
+        document.getElementById('logout').addEventListener('click', () => {
+            localStorage.removeItem('userId');
+            window.location.href = 'index.html'; // Redirect to login page
+        });
+    </script>
 </body>
+
 </html>
