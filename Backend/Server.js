@@ -42,6 +42,30 @@ const upload = multer({
     limits: { fileSize: 1024 * 1024 * 200 } // Limit files to 200MB
 }).any(); // Use .any() to accept any number of files with any names
 
+// Add token generation endpoints here
+app.get('/generate-token', (req, res) => {
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/drive'],
+    });
+    res.send(`Authorize this app by visiting this URL: <a href="${authUrl}" target="_blank">${authUrl}</a>`);
+});
+
+app.get('/oauth2callback', async (req, res) => {
+    const code = req.query.code;
+    if (!code) {
+        return res.status(400).send('Missing authorization code');
+    }
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        res.json(tokens);
+    } catch (error) {
+        console.error('Error retrieving access token:', error);
+        res.status(500).send('Error retrieving access token');
+    }
+});
+
+
 
 app.post('/upload-file', upload, async (req, res) => {
     if (!req.files || req.files.length === 0) {
