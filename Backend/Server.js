@@ -251,7 +251,7 @@ const createTableMetadata = () => {
         id INT AUTO_INCREMENT PRIMARY KEY,
         tableName VARCHAR(255) NOT NULL,
         attributeName VARCHAR(255) NOT NULL,
-        semanticType ENUM('INT', 'VARCHAR(255)', 'IMAGE', 'SONG') NOT NULL
+        semanticType VARCHAR(255) NOT NULL
     )`;
 
     pool.query(query, (err) => {
@@ -337,14 +337,12 @@ app.get('/tables', (req, res) => {
     });
 });
 
-// Endpoint to create a new table for a user
 app.post('/create-table', [
     check('tableName').notEmpty().withMessage('Table name is required'),
     check('attributes').isArray().withMessage('Attributes must be an array'),
     check('userId').notEmpty().withMessage('UserId is required'),
-    check('attributes.*.name').isString().withMessage('Attribute name must be a string'),
-    check('attributes.*.type').isString().withMessage('Attribute type must be a string'),
-], checkUserExists, (req, res) => {
+    check('attributes.*.name').isString().withMessage('Attribute name must be a string')
+], checkUserExists, (req, res) => {   
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return sendResponse(res, 400, 'Validation errors', errors.array());
@@ -367,27 +365,13 @@ app.post('/create-table', [
         let metadataInserts = [];
 
         attributes.forEach(attr => {
-            // Adjust the attribute types to MySQL compatible types
-            let dataType;
-            let semanticType = attr.type; // Save the semantic type for the metatable
-
-            switch (attr.type) {
-                case 'INT':
-                    dataType = 'INT';
-                    break;
-                case 'VARCHAR(255)':
-                    dataType = 'VARCHAR(255)';
-                    break;
-                case 'IMAGE':
-                case 'SONG':
-                    dataType = 'VARCHAR(255)'; // Store paths or identifiers as VARCHAR
-                    break;
-                default:
-                    return sendResponse(res, 400, `Invalid attribute type: ${attr.type}`);
-            }
-
+            // Set attribute type as VARCHAR(255) by default
+            const dataType = 'VARCHAR(255)';
             query += `${mysql.escapeId(attr.name)} ${dataType}, `;
-            metadataInserts.push([tableName, attr.name, semanticType]); // Collect metadata inserts
+
+            // Determine the semanticType for metadata based on isFile flag
+            const semanticType = attr.isFile === true ? 'FILE' : 'VARCHAR(255)';
+            metadataInserts.push([tableName, attr.name, semanticType]);
         });
 
         query = query.slice(0, -2) + ')'; // Remove trailing comma and space
@@ -420,6 +404,8 @@ app.post('/create-table', [
         });
     });
 });
+
+
 
 // Endpoint to get the schema of a specific table, excluding the 'id' column
 // Modify the /get-table-schema/:tableName endpoint

@@ -403,31 +403,27 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
 
             // Function to create a new attribute input field
             function createAttributeField() {
-                attributeCount++; // Increment the attribute count
+    attributeCount++; // Increment the attribute count
 
-                const newAttribute = document.createElement('div');
-                newAttribute.classList.add('mb-3', 'attribute');
-                newAttribute.innerHTML = `
-                    <label for="attribute-name-${attributeCount}" class="form-label">Attribute Name:</label>
-                    <input type="text" class="form-control" id="attribute-name-${attributeCount}" name="attribute-name-${attributeCount}" required>
-                    <label for="attribute-type-${attributeCount}" class="form-label">Attribute Type:</label>
-                    <select class="form-select" id="attribute-type-${attributeCount}" name="attribute-type-${attributeCount}" required>
-                        <option value="">Select Data Type</option>
-                        <option value="INT">Numeric</option>
-                        <option value="VARCHAR(255)">Text</option>
-                        <option value="IMAGE">Image</option>
-                        <option value="SONG">Song</option>
-                    </select>
-                    <button type="button" class="btn btn-danger mt-2 remove-attribute" data-attribute-id="${attributeCount}">Remove</button>
-                `;
-                document.getElementById('attributes-container').appendChild(newAttribute); // Append the new attribute to the container
+    const newAttribute = document.createElement('div');
+    newAttribute.classList.add('mb-3', 'attribute');
+    newAttribute.innerHTML = `
+        <label for="attribute-name-${attributeCount}" class="form-label">Attribute Name:</label>
+        <input type="text" class="form-control" id="attribute-name-${attributeCount}" name="attribute-name-${attributeCount}" required>
 
-                // Attach the remove button functionality
-                newAttribute.querySelector('.remove-attribute').addEventListener('click', () => {
-                    newAttribute.remove(); // Remove the attribute field
-                    attributeCount--; // Decrement attribute count
-                });
-            }
+        <label class="form-check-label" for="insert-file-${attributeCount}">Do you need insert file here?</label>
+        <input type="checkbox" class="form-check-input" id="insert-file-${attributeCount}">
+
+        <button type="button" class="btn btn-danger mt-2 remove-attribute" data-attribute-id="${attributeCount}">Remove</button>
+    `;
+    document.getElementById('attributes-container').appendChild(newAttribute); // Append the new attribute to the container
+
+    // Attach the remove button functionality
+    newAttribute.querySelector('.remove-attribute').addEventListener('click', () => {
+        newAttribute.remove(); // Remove the attribute field
+        attributeCount--; // Decrement attribute count
+    });
+}
 
             // Attach the event listener for the "Add Attribute" button
             document.getElementById('add-attribute').addEventListener('click', createAttributeField);
@@ -461,21 +457,24 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
                 const attributeNames = new Set(); // To check for duplicates
 
                 // Collect attribute data
-                for (let i = 1; i <= attributeCount; i++) {
-                    const attributeName = document.getElementById(`attribute-name-${i}`)?.value;
-                    const attributeType = document.getElementById(`attribute-type-${i}`)?.value;
+for (let i = 1; i <= attributeCount; i++) {
+    const attributeName = document.getElementById(`attribute-name-${i}`)?.value;
+    const insertFile = document.getElementById(`insert-file-${i}`)?.checked;
 
-                    if (attributeName && attributeType) {
-                        // Check for duplicate attribute names
-                        if (attributeNames.has(attributeName)) {
-                            alert(`Attribute name "${attributeName}" is already used. Please choose a different name.`);
-                            return;
-                        }
-                        attributeNames.add(attributeName); // Add to set if unique
-                        attributes.push({ name: attributeName, type: attributeType });
-                    }
-                }
-
+    if (attributeName) {
+        // Check for duplicate attribute names
+        if (attributeNames.has(attributeName)) {
+            alert(`Attribute name "${attributeName}" is already used. Please choose a different name.`);
+            return;
+        }
+        attributeNames.add(attributeName); // Add to set if unique
+        attributes.push({ 
+            name: attributeName, 
+            type: "VARCHAR(255)", // Default type as VARCHAR
+            isFile: insertFile // Indicate if it's for file insertion
+        });
+    }
+}
                 // Check if category name already exists
                 fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
                     .then(response => response.json())
@@ -499,6 +498,7 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
                             .then(result => {
                                 if (result.success) {
                                     alert('Category created successfully');
+                                   
                                     resetModal(); // Reset modal fields
                                     loadUserTables(); // Reload tables in the dropdown
 
@@ -508,6 +508,8 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
 
                                     // Redirect to dashboard after modal is closed
                                     window.location.href = 'dashboard.html'; // Redirect to dashboard
+                                  
+
                                 } else {
                                     console.error('Error creating category:', result.message);
                                 }
@@ -523,7 +525,7 @@ document.getElementById('edit-category-form').addEventListener('submit', (event)
                         console.error('Error fetching existing categories:', error);
                     });
             });
-
+            
           // Handle category dropping
 document.getElementById('confirm-drop').addEventListener('click', () => {
     const categoryToDrop = document.getElementById('drop-table-select').value;
