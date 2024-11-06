@@ -817,35 +817,22 @@ app.put('/update-category', (req, res) => {
                 try {
                     const attributePromises = [];
                     if (newAttributes && newAttributes.length > 0) {
-                        newAttributes.forEach(({ name, type }) => {
+                        newAttributes.forEach(({ name, isFile }) => {
                             attributePromises.push(new Promise((resolve, reject) => {
-                                if (!name || !type) {
-                                    return reject(new Error(`Attribute name and type cannot be empty. Provided: name=${name}, type=${type}`));
+                                if (!name) {
+                                    return reject(new Error(`Attribute name cannot be empty. Provided: name=${name}`));
                                 }
 
-                                // Map semantic types to valid MySQL data types
-                                let sqlType;
-                                switch (type) {
-                                    case 'IMAGE':
-                                    case 'SONG':
-                                        sqlType = 'VARCHAR(255)';
-                                        break;
-                                    case 'INT':
-                                        sqlType = 'INT';
-                                        break;
-                                    case 'VARCHAR(255)':
-                                        sqlType = 'VARCHAR(255)';
-                                        break;
-                                    default:
-                                        return reject(new Error(`Invalid attribute type: ${type}`));
-                                }
+                                // Determine SQL data type and semantic type based on `isFile`
+                                const sqlType = 'VARCHAR(255)';  // Using VARCHAR(255) for file or text storage
+                                const semanticType = isFile ? 'FILE' : 'VARCHAR';
 
                                 // Check if the attribute already exists
                                 const checkAttributeQuery = 'SELECT COUNT(*) AS count FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?';
                                 connection.query(checkAttributeQuery, [process.env.DB_NAME, categoryName, name], (error, results) => {
                                     if (error) return reject(error);
                                     if (results[0].count > 0) {
-                                        console.log(`Attribute "${name}" already exists in category "${categoryName}". Keeping existing attribute.`);
+                                        console.log(`Attribute "${name}" already exists in category "${categoryName}". Skipping.`);
                                         return resolve();
                                     }
 
@@ -856,7 +843,7 @@ app.put('/update-category', (req, res) => {
 
                                         // Add new attribute to table_metadata
                                         const insertMetaQuery = `INSERT INTO table_metadata (tableName, attributeName, semanticType) VALUES (?, ?, ?)`;
-                                        connection.query(insertMetaQuery, [categoryName, name, type], (metaError) => {
+                                        connection.query(insertMetaQuery, [categoryName, name, semanticType], (metaError) => {
                                             if (metaError) return reject(metaError);
                                             resolve();
                                         });
@@ -900,42 +887,27 @@ app.put('/update-category', (req, res) => {
                         });
                     }
 
-                    // Handle changing attribute data types
-                    if (dataTypeChanges && dataTypeChanges.length > 0) {
-                        dataTypeChanges.forEach(({ name, newType }) => {
-                            if (!name || !newType) {
-                                throw new Error(`Attribute name and new type cannot be empty. Provided: name=${name}, newType=${newType}`);
-                            }
+                   // Handle changing attribute data types
+if (dataTypeChanges && dataTypeChanges.length > 0) {
+    dataTypeChanges.forEach(({ name, newType, isFile }) => {
+        const sqlType = 'VARCHAR(255)'; // Default VARCHAR(255) for files and text
+        const semanticType = isFile ? 'FILE' : 'VARCHAR'; // Set `semanticType` based on `isFile`
 
-                            let sqlType;
-                            switch (newType) {
-                                case 'IMAGE':
-                                case 'SONG':
-                                case 'VARCHAR(255)':
-                                    sqlType = 'VARCHAR(255)';
-                                    break;
-                                case 'INT':
-                                    sqlType = 'INT';
-                                    break;
-                                default:
-                                    throw new Error(`Unsupported data type: ${newType}`);
-                            }
+        const alterQuery = `ALTER TABLE ?? MODIFY ?? ${sqlType}`;
+        dataTypePromises.push(new Promise((resolve, reject) => {
+            connection.query(alterQuery, [categoryName, name], (error) => {
+                if (error) return reject(error);
 
-                            const alterQuery = `ALTER TABLE ?? MODIFY ?? ${sqlType}`;
-                            dataTypePromises.push(new Promise((resolve, reject) => {
-                                connection.query(alterQuery, [categoryName, name], (error) => {
-                                    if (error) return reject(error);
-
-                                    // Update table_metadata with new semanticType
-                                    const updateMetaQuery = `UPDATE table_metadata SET semanticType = ? WHERE tableName = ? AND attributeName = ?`;
-                                    connection.query(updateMetaQuery, [newType, categoryName, name], (metaError) => {
-                                        if (metaError) return reject(metaError);
-                                        resolve();
-                                    });
-                                });
-                            }));
-                        });
-                    }
+                // Update `table_metadata` with the new `semanticType`
+                const updateMetaQuery = `UPDATE table_metadata SET semanticType = ? WHERE tableName = ? AND attributeName = ?`;
+                connection.query(updateMetaQuery, [semanticType, categoryName, name], (metaError) => {
+                    if (metaError) return reject(metaError);
+                    resolve();
+                });
+            });
+        }));
+    });
+}
 
                     // Handle removing attributes
                     if (removeAttributes && removeAttributes.length > 0) {
@@ -994,6 +966,7 @@ app.put('/update-category', (req, res) => {
         });
     });
 });
+
 
 
 // Start the server
