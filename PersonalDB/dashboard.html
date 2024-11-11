@@ -211,27 +211,37 @@
     const removeAttributes = [];
 
     document.addEventListener('click', (event) => {
-        if (event.target.classList.contains('remove-edit-attribute')) {
-            const attributeName = event.target.dataset.attributeName;
-            if (attributeName) {
-                removeAttributes.push(attributeName);
-                event.target.closest('.attribute').remove();
-            }
-        }
-    });
+    if (event.target.classList.contains('remove-edit-attribute')) {
+        const attributeName = event.target.dataset.attributeName;
+        const attributeDiv = event.target.closest('.attribute');
 
-    document.getElementById('edit-category-form').addEventListener('submit', (event) => {
+        if (attributeName) {
+            // Track the removed attribute name
+            if (!removeAttributes.includes(attributeName)) {
+                removeAttributes.push(attributeName);
+            }
+            // Mark the attribute as removed
+            attributeDiv.classList.add('removed');
+        }
+
+        // Remove the attribute element from the DOM
+        attributeDiv.remove();
+    }
+});
+
+    document.getElementById('edit-category-form').addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const newAttributes = [];
     const renameAttributes = [];
-    const dataTypeChanges = []; // To track changes in `isFile` status
+    const dataTypeChanges = [];
     const attributeNames = new Set();
     const userId = localStorage.getItem('userId');
     const tableName = document.getElementById('edit-category-select').value;
     const newCategoryName = document.getElementById('new-category-name').value || tableName;
 
     const attributeFields = document.querySelectorAll('#edit-attributes-container .attribute');
+
     attributeFields.forEach(field => {
         const attributeName = field.querySelector('input[type="text"]').value;
         const isFile = field.querySelector('input[type="checkbox"]').checked;
@@ -253,30 +263,49 @@
             newAttributes.push({ name: attributeName, isFile });
         } else if (attributeName !== originalName) {
             renameAttributes.push({ oldName: originalName, newName: attributeName });
-        } else if (isFile !== originalIsFile) { // Capture only if `isFile` status has changed
+        } else if (isFile !== originalIsFile) {
             dataTypeChanges.push({ name: attributeName, newType: 'VARCHAR(255)', isFile });
         }
     });
 
-    fetch(`http://127.0.0.1:8081/update-category`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            categoryName: tableName,
-            newCategoryName,
-            newAttributes,
-            removeAttributes,
-            renameAttributes,
-            dataTypeChanges,  // Send `dataTypeChanges` to track `isFile` changes
-            userId
-        })
-    })
-    .then(response => response.json())
-    .then(result => {
+    // Collect removed attributes (ensure it only includes attributes marked as removed)
+    const removedFields = document.querySelectorAll('.attribute.removed');
+    removedFields.forEach(field => {
+        const attributeName = field.querySelector('.remove-edit-attribute').dataset.attributeName;
+        if (attributeName && !removeAttributes.includes(attributeName)) {
+            removeAttributes.push(attributeName);
+        }
+    });
+
+    // Confirm the update action
+    const userConfirmed = confirm(`Are you sure you want to update the category "${tableName}"?`);
+    if (!userConfirmed) {
+        return;
+    }
+
+    // Prepare the request body
+    const requestBody = {
+        categoryName: tableName,
+        newCategoryName,
+        newAttributes,
+        removeAttributes,
+        renameAttributes,
+        dataTypeChanges,
+        userId
+    };
+
+    try {
+        const response = await fetch(`http://127.0.0.1:8081/update-category`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const result = await response.json();
         if (result.success) {
-            alert('Category updated successfully');
+            alert('Category updated successfully!');
             const myModal = bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'));
             myModal.hide();
             window.location.href = 'dashboard.html';
@@ -284,11 +313,10 @@
             console.error('Error updating category:', result.message);
             alert(`Error updating category: ${result.message}`);
         }
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Error updating category:', error);
-        alert('An error occurred while updating the category.');
-    });
+        alert('An error occurred while updating the category. Please try again.');
+    }
 });
 
 });

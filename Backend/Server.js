@@ -359,16 +359,20 @@ app.post('/create-table', [
                     return sendResponse(res, 500, 'Error linking table to user');
                 }
 
-                // Insert metadata for each attribute
-                const metadataQuery = 'INSERT INTO table_metadata (tableName, attributeName, semanticType) VALUES ?';
-                pool.query(metadataQuery, [metadataInserts], (err) => {
-                    if (err) {
-                        console.error('Error inserting metadata:', err);
-                        return sendResponse(res, 500, 'Error inserting metadata');
-                    }
+                // Insert metadata for each attribute if attributes are provided
+if (metadataInserts.length > 0) {
+    const metadataQuery = 'INSERT INTO table_metadata (tableName, attributeName, semanticType) VALUES ?';
+    pool.query(metadataQuery, [metadataInserts], (err) => {
+        if (err) {
+            console.error('Error inserting metadata:', err);
+            return sendResponse(res, 500, 'Error inserting metadata');
+        }
+        sendResponse(res, 200, 'Table and metadata created successfully');
+    });
+} else {
+    sendResponse(res, 200, 'Table created successfully without attributes');
+}
 
-                    sendResponse(res, 200, 'Table and metadata created successfully');
-                });
             });
         });
     });
@@ -899,13 +903,27 @@ if (dataTypeChanges && dataTypeChanges.length > 0) {
                     const renameCategoryQuery = 'ALTER TABLE ?? RENAME TO ??';
                     connection.query(renameCategoryQuery, [categoryName, newCategoryName], (error) => {
                         if (error) return handleError(error);
-                        commitTransaction();
+            
+                        // Update `table_metadata` table with the new category name
+                        const updateMetadataQuery = 'UPDATE table_metadata SET tableName = ? WHERE tableName = ?';
+                        connection.query(updateMetadataQuery, [newCategoryName, categoryName], (metaError) => {
+                            if (metaError) return handleError(metaError);
+            
+                            // Update `user_tables` table with the new category name
+                            const updateUserTablesQuery = 'UPDATE user_tables SET tableName = ? WHERE tableName = ?';
+                            connection.query(updateUserTablesQuery, [newCategoryName, categoryName], (userTablesError) => {
+                                if (userTablesError) return handleError(userTablesError);
+            
+                                // Commit the transaction after all updates
+                                commitTransaction();
+                            });
+                        });
                     });
                 } else {
                     commitTransaction();
                 }
             }
-
+            
             function commitTransaction() {
                 connection.commit((err) => {
                     if (err) {
