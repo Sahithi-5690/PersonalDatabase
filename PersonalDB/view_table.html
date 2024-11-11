@@ -117,13 +117,8 @@
                     <form id="row-form" enctype="multipart/form-data">
                         <div id="dynamic-fields"></div>
                         <input type="hidden" id="row-id" name="id">
-                    
-                        <!-- Add this section for file uploads -->
-                        
-                    
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
-                    
                 </div>
             </div>
         </div>
@@ -222,10 +217,10 @@
                         </thead>
                         <tbody>
                 `;
-        
+
                 data.forEach(row => {
                     tableHTML += `
-                        <tr>
+                        <tr data-row-id="${row.id}">
                             <td class="hidden">${row.id}</td>
                             ${Object.keys(row).map(key => {
                                 if (key !== 'id') {
@@ -246,24 +241,47 @@
                         </tr>
                     `;
                 });
-        
+
                 tableHTML += `</tbody></table>`;
-        
                 document.getElementById('card-details').innerHTML = tableHTML;
         
+                // Edit Row Button
                 document.querySelectorAll('.edit-row').forEach(button => {
-                    button.addEventListener('click', () => {
+                    button.addEventListener('click', async () => {
                         const rowId = button.getAttribute('data-id');
-                        loadDynamicFields(rowId);
+                        document.getElementById('row-id').value = rowId;
+                        document.getElementById('rowModalLabel').textContent = "Edit Row";
+
+                        await loadDynamicFields(rowId);
+
+                        const rowModal = new bootstrap.Modal(document.getElementById('rowModal'));
+                        rowModal.show();
                     });
                 });
-        
+
                 document.querySelectorAll('.delete-row').forEach(button => {
-                    button.addEventListener('click', () => {
+                    button.addEventListener('click', async () => {
                         const rowId = button.getAttribute('data-id');
-                        deleteRow(rowId, tableName);
+                        const confirmDelete = confirm("Are you sure you want to delete this row? This action cannot be undone.");
+                        if (confirmDelete) {
+                            try {
+                                await deleteRow(rowId, tableName);
+                                alert("Row deleted successfully.");
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 5000);
+                            } catch (error) {
+                                alert("Error deleting row: " + error.message);
+                            }
+                        }
                     });
                 });
+            }
+
+            async function deleteRow(rowId, tableName) {
+                const response = await fetch(`http://localhost:8081/delete-row/${tableName}/${rowId}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message);
             }
 
             function loadDynamicFields(rowId = null) {
@@ -271,21 +289,16 @@
                     .then(response => response.json())
                     .then(schema => {
                         const dynamicFields = document.getElementById('dynamic-fields');
-                        dynamicFields.innerHTML = ''; // Clear existing fields
-        
+                        dynamicFields.innerHTML = '';
+
                         schema.data.forEach(field => {
                             let fieldHTML = '';
                             if (field.type === 'FILE') {
                                 fieldHTML = `
                                     <div class="mb-3">
                                         <label for="${field.name}" class="form-label">${field.name}</label>
-                                        <select class="form-select mb-2" id="${field.name}-type">
-                                            <option value="image/*">Image</option>
-                                            <option value="audio/*">Audio</option>
-                                            <option value="video/*">Video</option>
-                                            <option value="*/*">Other</option>
-                                        </select>
                                         <input type="file" class="form-control" id="${field.name}" name="${field.name}">
+                                        <div id="${field.name}-link" class="mt-2"></div>
                                     </div>
                                 `;
                             } else {
@@ -293,53 +306,138 @@
                             }
                             dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
                         });
-        
+
                         if (rowId) loadRowData(rowId);
                     })
                     .catch(error => console.error('Error loading schema:', error));
             }
 
-            function loadRowData(rowId) {
-                fetch(`http://127.0.0.1:8081/get-row/${tableName}/${rowId}`)
-                    .then(response => response.json())
-                    .then(row => {
-                        for (const key in row.data) {
-                            const input = document.getElementById(key);
-                            if (input && input.type !== 'file') input.value = row.data[key];
+             // Load row data including current file link if available
+    function loadRowData(rowId) {
+        fetch(`http://127.0.0.1:8081/get-row/${tableName}/${rowId}`)
+            .then(response => response.json())
+            .then(row => {
+                for (const key in row.data) {
+                    const input = document.getElementById(key);
+                    if (input && input.type === 'file' && row.data[key]) {
+                        const fileLink = document.getElementById(`${key}-link`);
+                        if (fileLink) {
+                            fileLink.innerHTML = `<a href="${row.data[key]}" target="_blank">View Current File</a>`;
+                            fileLink.classList.remove('hidden');
                         }
-                    })
-                    .catch(error => console.error('Error loading row data:', error));
-            }
-
-            document.getElementById('row-form').addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const formData = new FormData(event.target);
-                const rowId = formData.get('id');
-                const textData = {};
-
-                for (let [key, value] of formData.entries()) {
-                    if (!(value instanceof File && value.size > 0)) textData[key] = value;
+                    } else if (input) {
+                        input.value = row.data[key];
+                    }
                 }
+            })
+            .catch(error => console.error('Error loading row data:', error));
+    }
 
-                const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
-                if (hasFile) await handleFileUpload(formData, textData);
-                if (Object.keys(textData).length > 0) await saveTextData(rowId, textData);
-            });
+    document.getElementById('row-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const rowId = formData.get('id');
+    const tableName = new URLSearchParams(window.location.search).get('table');
 
-            async function handleFileUpload(formData, textData) {
-                formData.append('tableName', tableName);
-                const fileResponse = await fetch('http://localhost:8081/upload-file', { method: 'POST', body: formData });
-                const fileResult = await fileResponse.json();
-                if (!fileResult.success) console.error('Error uploading file:', fileResult.message);
+    // Check if there are any files in the form data
+    const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
+
+    try {
+        // If rowId is present, it means we are editing an existing row
+        if (rowId) {
+            // Send form data (including files) directly to the edit-row endpoint
+            await handleEditRow(formData, tableName, rowId);
+        } else {
+            // If no rowId, we are adding a new row
+            if (hasFile) {
+                await handleFileUpload(formData);
             }
+            await saveTextData(null, formData);
+        }
+    } catch (error) {
+        console.error('Error submitting form:', error);
+    }
+});
 
-            async function saveTextData(rowId, tableName, textData) {
-                const url = rowId ? `http://localhost:8081/edit-row/${tableName}/${rowId}` : `http://localhost:8081/save-row/${tableName}`;
-                const method = rowId ? 'PUT' : 'POST';
-                await fetch(url, { method, body: JSON.stringify(textData), headers: { 'Content-Type': 'application/json' } });
+// Function to handle editing a row, including file uploads
+async function handleEditRow(formData, tableName, rowId) {
+    const url = `http://localhost:8081/edit-row/${tableName}/${rowId}`;
+
+    // Send the form data (including files) to the edit-row endpoint using PUT
+    const response = await fetch(url, {
+        method: 'PUT',
+        body: formData,
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+        console.error('Error editing row:', result.message);
+    } else {
+        alert('Row updated successfully!');
+        updateFileLinks(result.data?.updatedFileUrls);
+        closeModalAndRefresh();
+    }
+}
+
+
+// Function to handle file uploads for new rows
+async function handleFileUpload(formData) {
+    formData.append('tableName', tableName);
+    const fileResponse = await fetch('http://localhost:8081/upload-file', { method: 'POST', body: formData });
+    const fileResult = await fileResponse.json();
+    if (!fileResult.success) {
+        console.error('Error uploading file:', fileResult.message);
+        throw new Error(fileResult.message);
+    }
+}
+
+// Function to save text data (used for new row creation or updating non-file fields)
+async function saveTextData(rowId, formData) {
+    const textData = {};
+    formData.forEach((value, key) => {
+        if (!(value instanceof File && value.size === 0)) textData[key] = value;
+    });
+
+    const tableName = new URLSearchParams(window.location.search).get('table');
+    const url = rowId ? `http://localhost:8081/edit-row/${tableName}/${rowId}` : `http://localhost:8081/save-row/${tableName}`;
+    const method = rowId ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+        method,
+        body: JSON.stringify(textData),
+        headers: { 'Content-Type': 'application/json' },
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+        console.error('Error saving text data:', result.message);
+        throw new Error(result.message);
+    } else {
+        alert(rowId ? 'Row updated successfully!' : 'New row added successfully!');
+        updateFileLinks(result.data?.updatedFileUrls);
+        closeModalAndRefresh();
+    }
+}
+
+// Function to update file links in the UI after a successful update
+function updateFileLinks(updatedFileUrls) {
+    if (updatedFileUrls) {
+        for (const [field, url] of Object.entries(updatedFileUrls)) {
+            const fileLink = document.getElementById(`${field}-link`);
+            if (fileLink) {
+                fileLink.innerHTML = `<a href="${url}" target="_blank">View Updated File</a>`;
             }
+        }
+    }
+}
 
-            // Logout functionality
+// Function to close the modal and refresh the page
+function closeModalAndRefresh() {
+    const rowModal = bootstrap.Modal.getInstance(document.getElementById('rowModal'));
+    rowModal.hide();
+    setTimeout(() => location.reload(), 500);
+}
+
             document.getElementById('logout').addEventListener('click', () => {
                 localStorage.removeItem('userId');
                 window.location.href = 'index.html';

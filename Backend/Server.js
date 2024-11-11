@@ -65,8 +65,6 @@ app.get('/oauth2callback', async (req, res) => {
     }
 });
 
-
-
 app.post('/upload-file', upload, async (req, res) => {
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -79,101 +77,72 @@ app.post('/upload-file', upload, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Missing table name' });
     }
 
-    try {
-        let query;
-        let fieldUpdates = {}; // To store both non-file and file inputs
-        let updateValues = []; // To hold the query parameters dynamically
-        let updateQuery = ''; // To build the dynamic update query
+    // Reject if `rowId` is provided, since this endpoint is for insertion only
+    if (rowId) {
+        return res.status(400).json({ success: false, message: 'Updates not allowed in upload-file. Use edit-row for updates.' });
+    }
 
-        // Loop through each file and handle its upload
+    try {
+        const fieldUpdates = {};
+
+        // Handle file uploads
         for (let file of req.files) {
             const filePath = file.path;
             const mimeType = file.mimetype;
-            const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY'; // Your specific folder ID
+            const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
 
             try {
-                // Upload file to Google Drive
                 const response = await drive.files.create({
                     requestBody: {
-                        name: file.originalname, // File name on Google Drive
+                        name: file.originalname,
                         mimeType: mimeType,
                         parents: [folderId],
                     },
                     media: {
                         mimeType: mimeType,
-                        body: fs.createReadStream(filePath), // Read the file from local storage
+                        body: fs.createReadStream(filePath),
                     },
                 });
 
-                // After upload, delete the file from local storage
                 fs.unlinkSync(filePath);
 
-                // Get the uploaded file's ID and construct a URL
                 const fileId = response.data.id;
                 const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                const attributeName = file.fieldname;
 
-                const attributeName = file.fieldname; // Use fieldname to get the correct attribute
-
-                // Add the file URL to field updates
                 fieldUpdates[attributeName] = fileUrl;
 
             } catch (error) {
-                // Ensure the file is deleted even in case of an error
                 if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
                 }
-                throw error; // Propagate the error for further handling
+                throw error;
             }
         }
 
-        // Add non-file inputs (from req.body) to the fieldUpdates object
+        // Add non-file inputs (from req.body) to fieldUpdates, excluding 'id'
         for (let [key, value] of Object.entries(req.body)) {
-            // Exclude the table name and row ID from field updates
-            if (key !== 'tableName' && key !== 'rowId') {
-                fieldUpdates[key] = value; // Add the non-file inputs to the field updates
+            if (key !== 'tableName' && key !== 'rowId' && key !== 'id') {
+                fieldUpdates[key] = value;
             }
         }
 
-        // Check if rowId exists - update the existing row
-        if (rowId) {
-            updateQuery = `UPDATE ?? SET `;
-            let setClauses = [];
+        // Insert a new row without specifying 'id'
+        const columns = Object.keys(fieldUpdates);
+        const values = Object.values(fieldUpdates);
+        const query = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
 
-            for (let [attributeName, attributeValue] of Object.entries(fieldUpdates)) {
-                setClauses.push(`?? = ?`);
-                updateValues.push(attributeName, attributeValue);
-            }
+        await pool.query(query, values);
 
-            updateQuery += setClauses.join(', ') + ` WHERE id = ?`;
-            updateValues.push(rowId);
+        res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
 
-            pool.query(updateQuery, [tableName, ...updateValues], (error) => {
-                if (error) {
-                    console.error('Error updating row:', error);
-                    return res.status(500).json({ success: false, message: 'Error updating row: ' + error.message });
-                }
-                res.status(200).json({ success: true, message: 'Files and data uploaded and updated successfully', fieldUpdates });
-            });
-        } else {
-            // If rowId does not exist, insert a new row with both non-file and file inputs
-            const columns = Object.keys(fieldUpdates);
-            const values = Object.values(fieldUpdates);
-
-            query = `INSERT INTO ?? (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
-
-            pool.query(query, [tableName, ...values], (error, results) => {
-                if (error) {
-                    console.error('Error inserting row:', error);
-                    return res.status(500).json({ success: false, message: 'Error inserting row: ' + error.message });
-                }
-                res.status(200).json({ success: true, message: 'Files and data uploaded and inserted successfully', fieldUpdates });
-            });
-        }
     } catch (error) {
-        console.error('Error uploading file:', error);
-        res.status(500).json({ success: false, message: 'Error uploading file to Google Drive' });
+        console.error('Error inserting row:', error);
+        res.status(500).json({ success: false, message: 'Error inserting row' });
     }
 });
+
+
 
 // Database connection pool setup
 const pool = mysql.createPool({
@@ -451,7 +420,7 @@ app.get('/get-table-schema/:tableName', (req, res) => {
 // Endpoint to delete a row from a specific table and delete associated Google Drive files
 app.delete('/delete-row/:tableName/:rowId', async (req, res) => {
     const tableName = req.params.tableName;
-    const rowId = req.params.rowId; // Assuming the row ID is passed as a URL parameter
+    const rowId = req.params.rowId;
 
     try {
         // Check if the table exists
@@ -466,18 +435,17 @@ app.delete('/delete-row/:tableName/:rowId', async (req, res) => {
             return sendResponse(res, 404, 'Row not found');
         }
         const rowData = rowResults[0];
-        console.log("Row Data:", rowData); // Log row data for inspection
 
-        // Fetch the metadata to determine file fields dynamically
-        const metadataResults = await pool.query('SELECT attributeName FROM table_metadata WHERE tableName = ? AND semanticType IN (?, ?)', [tableName, 'IMAGE', 'SONG']);
+        // Fetch metadata to determine only 'FILE' type fields dynamically
+        const metadataResults = await pool.query(
+            'SELECT attributeName FROM table_metadata WHERE tableName = ? AND semanticType = ?',
+            [tableName, 'FILE']
+        );
         const fileFields = metadataResults.map(meta => meta.attributeName);
 
-        console.log("File fields from metadata:", fileFields); // Log file fields dynamically retrieved
-
-        // Loop through each dynamically fetched file field and delete from Google Drive if exists
+        // Delete files from Google Drive
         for (const field of fileFields) {
             const fileUrl = rowData[field];
-            console.log(`Processing field: ${field}, URL: ${fileUrl}`); // Log each file field and URL
             if (fileUrl) {
                 const fileId = extractFileIdFromUrl(fileUrl);
                 if (fileId) {
@@ -485,13 +453,11 @@ app.delete('/delete-row/:tableName/:rowId', async (req, res) => {
                         await drive.files.delete({ fileId });
                         console.log(`File with ID ${fileId} deleted from Google Drive`);
                     } catch (err) {
-                        console.error(`Failed to delete file with ID ${fileId}:`, err);
+                        console.error(`Error deleting file with ID ${fileId} from Google Drive:`, err.message);
                     }
                 } else {
-                    console.error(`No valid file ID found for field: ${field}, URL: ${fileUrl}`);
+                    console.error(`Invalid file ID extracted for URL: ${fileUrl}`);
                 }
-            } else {
-                console.log(`No file URL found for field: ${field}`);
             }
         }
 
@@ -499,31 +465,19 @@ app.delete('/delete-row/:tableName/:rowId', async (req, res) => {
         const deleteQuery = `DELETE FROM ${mysql.escapeId(tableName)} WHERE id = ?`;
         await pool.query(deleteQuery, [rowId]);
         sendResponse(res, 200, 'Row and associated files deleted successfully');
+
     } catch (error) {
         console.error('Error deleting row and files:', error);
-        return sendResponse(res, 500, 'Error deleting row and associated files');
+        sendResponse(res, 500, 'Error deleting row and associated files');
     }
 });
 
-// Function to extract the file ID from a Google Drive URL
+// Helper function to extract the file ID from a Google Drive URL
 function extractFileIdFromUrl(fileUrl) {
     const match = fileUrl.match(/\/d\/(.+?)\/view/);
     return match ? match[1] : null;
 }
 
-
-
-// Function to extract the file ID from a Google Drive URL
-function extractFileIdFromUrl(fileUrl) {
-    const match = fileUrl.match(/\/d\/(.+?)\/view/);
-    return match ? match[1] : null;
-}
-
-// Function to extract the file ID from a Google Drive URL
-function extractFileIdFromUrl(fileUrl) {
-    const match = fileUrl.match(/\/d\/(.+?)\/view/);
-    return match ? match[1] : null;
-}
 
 
 // Updated endpoint to delete a table, ensuring the user exists
@@ -652,27 +606,27 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
 
     try {
         // Check if the table exists
-        const results = await pool.query('SHOW TABLES LIKE ?', [tableName]);
-        if (results.length === 0) {
+        const tableExists = await pool.query('SHOW TABLES LIKE ?', [tableName]);
+        if (tableExists.length === 0) {
             return sendResponse(res, 404, 'Table not found');
         }
 
-        // Fetch the existing row data to retain current file URLs if no new file is uploaded
-        const existingRows = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
-        const existingRow = existingRows[0];
-        if (!existingRow) {
-            return sendResponse(res, 404, 'Row not found');
+        // Fetch the existing row to ensure it exists
+        const existingRow = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
+        if (existingRow.length === 0) {
+            return sendResponse(res, 404, 'Row not found. Update cannot proceed.');
         }
+
+        const updatedFileUrls = {};
 
         // Handle file uploads (if any)
         if (req.files && req.files.length > 0) {
             for (let file of req.files) {
                 const filePath = file.path;
                 const mimeType = file.mimetype;
-                const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY'; // Replace with your folder ID
+                const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
 
                 try {
-                    // Upload file to Google Drive
                     const response = await drive.files.create({
                         requestBody: {
                             name: file.originalname,
@@ -685,17 +639,14 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
                         },
                     });
 
-                    // Delete the local file after upload
                     fs.unlinkSync(filePath);
 
-                    // Get the uploaded file's ID and construct a URL
                     const fileId = response.data.id;
                     const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                    const attributeName = file.fieldname;
 
-                    // Add file field to rowData (e.g., song or image field)
-                    if (file.fieldname) {
-                        rowData[file.fieldname] = fileUrl;
-                    }
+                    rowData[attributeName] = fileUrl;
+                    updatedFileUrls[attributeName] = fileUrl;
 
                 } catch (error) {
                     console.error('Error uploading file:', error);
@@ -704,30 +655,37 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             }
         }
 
-        // Use existing file URLs if no new file is uploaded and the field is empty
+        // Remove 'id' and 'tableName' from rowData
+        delete rowData['id'];
+        delete rowData['tableName'];
+
+        // Merge with existing data
         rowData = {
-            ...existingRow, // Start with existing row data
-            ...rowData // Overwrite with new data (non-empty fields)
+            ...existingRow[0],
+            ...rowData,
         };
 
-        // Remove empty fields from the update process
-        const columns = Object.keys(rowData).filter(key => rowData[key] !== '' && rowData[key] !== undefined && rowData[key] !== null);
+        // Construct the update query
+        const columns = Object.keys(rowData);
         const values = columns.map(key => rowData[key]);
-
-        // Build the SET clause dynamically
         const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
-        const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
 
-        // Add rowId to the values for the WHERE clause
+        // Prepare the update query
+        const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
         values.push(rowId);
 
-        // Execute the query
-        await pool.query(query, values);
-        sendResponse(res, 200, 'Row updated successfully');
+        // Execute the update query
+        const result = await pool.query(query, values);
+
+        if (result.affectedRows === 0) {
+            return sendResponse(res, 500, 'Update failed. No rows were modified.');
+        }
+
+        res.status(200).json({ success: true, message: 'Row updated successfully', updatedFileUrls });
 
     } catch (error) {
-        console.error('Error processing request:', error);
-        return sendResponse(res, 500, 'Internal server error');
+        console.error('Error in edit-row endpoint:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
 
