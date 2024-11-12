@@ -66,7 +66,7 @@
                         <div id="attributes-container">
                             <!-- Attributes will be appended here -->
                         </div>
-                        <button type="button" class="btn btn-secondary" id="add-attribute">+ Add Attribute</button>
+                        <button type="button" class="btn btn-secondary" id="add-attribute">+ Add Field</button>
                         <button type="submit" class="btn btn-primary">Create Category</button>
                     </form>
                 </div>
@@ -116,7 +116,7 @@
                     <div id="edit-attributes-container">
                         <!-- Attributes will be populated here without data type dropdowns -->
                     </div>
-                    <button type="button" class="btn btn-secondary" id="add-edit-attribute">+ Add Attribute</button>
+                    <button type="button" class="btn btn-secondary" id="add-edit-attribute">+ Add Field</button>
                     <button type="submit" class="btn btn-primary">Update Category</button>
                 </form>
             </div>
@@ -180,7 +180,7 @@
                     newAttribute.classList.add('mb-3', 'attribute');
 
                     newAttribute.innerHTML = `
-                        <label for="edit-attribute-name-${attribute.name}" class="form-label">Attribute Name:</label>
+                        <label for="edit-attribute-name-${attribute.name}" class="form-label">Field Name:</label>
                         <input type="text" class="form-control" id="edit-attribute-name-${attribute.name}" 
                                name="edit-attribute-name" value="${attribute.name}" required>
                         <label class="form-check-label" for="edit-attribute-file-${attribute.name}">Do you need to insert file here?</label>
@@ -229,36 +229,41 @@
     }
 });
 
-    document.getElementById('edit-category-form').addEventListener('submit', async (event) => {
+document.getElementById('edit-category-form').addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const newAttributes = [];
     const renameAttributes = [];
     const dataTypeChanges = [];
     const attributeNames = new Set();
+    const removeAttributes = [];
     const userId = localStorage.getItem('userId');
     const tableName = document.getElementById('edit-category-select').value;
-    const newCategoryName = document.getElementById('new-category-name').value || tableName;
+    const newCategoryName = document.getElementById('new-category-name').value.trim() || tableName;
 
+    // Collect attribute data from the form
     const attributeFields = document.querySelectorAll('#edit-attributes-container .attribute');
 
     attributeFields.forEach(field => {
-        const attributeName = field.querySelector('input[type="text"]').value;
+        const attributeName = field.querySelector('input[type="text"]').value.trim();
         const isFile = field.querySelector('input[type="checkbox"]').checked;
         const originalName = field.querySelector('.remove-edit-attribute').dataset.attributeName;
         const originalIsFile = field.querySelector('input[type="checkbox"]').getAttribute('data-original-is-file') === 'true';
 
+        // Validate attribute name
         if (!attributeName) {
-            alert('Attribute names cannot be empty.');
+            alert('Field names cannot be empty.');
             return;
         }
 
+        // Check for duplicate attribute names
         if (attributeNames.has(attributeName)) {
-            alert(`Attribute name "${attributeName}" is already used. Please choose a different name.`);
+            alert(`Field name "${attributeName}" is already used. Please choose a different name.`);
             return;
         }
         attributeNames.add(attributeName);
 
+        // Determine if it's a new attribute, a renamed attribute, or a data type change
         if (!originalName) {
             newAttributes.push({ name: attributeName, isFile });
         } else if (attributeName !== originalName) {
@@ -268,7 +273,7 @@
         }
     });
 
-    // Collect removed attributes (ensure it only includes attributes marked as removed)
+    // Collect removed attributes
     const removedFields = document.querySelectorAll('.attribute.removed');
     removedFields.forEach(field => {
         const attributeName = field.querySelector('.remove-edit-attribute').dataset.attributeName;
@@ -277,7 +282,7 @@
         }
     });
 
-    // Confirm the update action
+    // Confirm the update action with the user
     const userConfirmed = confirm(`Are you sure you want to update the category "${tableName}"?`);
     if (!userConfirmed) {
         return;
@@ -295,6 +300,7 @@
     };
 
     try {
+        // Send the update request to the backend
         const response = await fetch(`http://127.0.0.1:8081/update-category`, {
             method: 'PUT',
             headers: {
@@ -310,8 +316,13 @@
             myModal.hide();
             window.location.href = 'dashboard.html';
         } else {
-            console.error('Error updating category:', result.message);
-            alert(`Error updating category: ${result.message}`);
+            // Check for specific error indicating the table name already exists
+            if (result.message.includes('ER_TABLE_EXISTS_ERROR')) {
+                alert('Category name is already taken. Please choose another name.');
+            } else {
+                console.error('Error updating category:', result.message);
+                alert(`Error updating category: ${result.message}`);
+            }
         }
     } catch (error) {
         console.error('Error updating category:', error);
@@ -329,7 +340,7 @@ document.getElementById('add-edit-attribute').addEventListener('click', function
     const newAttribute = document.createElement('div');
     newAttribute.classList.add('mb-3', 'attribute');
     newAttribute.innerHTML = `
-        <label for="edit-attribute-name-${attributeCount}" class="form-label">Attribute Name:</label>
+        <label for="edit-attribute-name-${attributeCount}" class="form-label">Field Name:</label>
         <input type="text" class="form-control" id="edit-attribute-name-${attributeCount}" required>
 
         <label class="form-check-label" for="edit-insert-file-${attributeCount}">Do you need insert file here?</label>
@@ -398,7 +409,7 @@ document.getElementById('add-edit-attribute').addEventListener('click', function
     const newAttribute = document.createElement('div');
     newAttribute.classList.add('mb-3', 'attribute');
     newAttribute.innerHTML = `
-        <label for="attribute-name-${attributeCount}" class="form-label">Attribute Name:</label>
+        <label for="attribute-name-${attributeCount}" class="form-label">Field Name:</label>
         <input type="text" class="form-control" id="attribute-name-${attributeCount}" name="attribute-name-${attributeCount}" required>
 
         <label class="form-check-label" for="insert-file-${attributeCount}">Do you need insert file here?</label>
@@ -439,82 +450,91 @@ document.getElementById('add-edit-attribute').addEventListener('click', function
             });
 
             // Handle form submission for creating a new category
-            document.getElementById('create-table-form').addEventListener('submit', (event) => {
-                event.preventDefault(); // Prevent the default form submission
+document.getElementById('create-table-form').addEventListener('submit', async (event) => {
+    event.preventDefault(); // Prevent the default form submission
 
-                const tableName = document.getElementById('table-name').value;
-                const attributes = [];
-                const attributeNames = new Set(); // To check for duplicates
+    const tableName = document.getElementById('table-name').value.trim();
+    const attributes = [];
+    const attributeNames = new Set(); // To check for duplicate attribute names
+    const userId = localStorage.getItem('userId');
 
-                // Collect attribute data
-for (let i = 1; i <= attributeCount; i++) {
-    const attributeName = document.getElementById(`attribute-name-${i}`)?.value;
-    const insertFile = document.getElementById(`insert-file-${i}`)?.checked;
-
-    if (attributeName) {
-        // Check for duplicate attribute names
-        if (attributeNames.has(attributeName)) {
-            alert(`Attribute name "${attributeName}" is already used. Please choose a different name.`);
-            return;
-        }
-        attributeNames.add(attributeName); // Add to set if unique
-        attributes.push({ 
-            name: attributeName, 
-            type: "VARCHAR(255)", // Default type as VARCHAR
-            isFile: insertFile // Indicate if it's for file insertion
-        });
+    if (!tableName) {
+        alert('Category name cannot be empty.');
+        return;
     }
-}
-                // Check if category name already exists
-                fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success) {
-                            const existingCategoryNames = result.data.map(table => table.toLowerCase());
-                            if (existingCategoryNames.includes(tableName.toLowerCase())) {
-                                alert('Category name already exists. Please choose a different category name.');
-                                return;
-                            }
 
-                            // Send request to create a new category
-                            fetch(`http://127.0.0.1:8081/create-table`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ tableName, attributes, userId })
-                            })
-                            .then(response => response.json())
-                            .then(result => {
-                                if (result.success) {
-                                    alert('Category created successfully');
-                                   
-                                    resetModal(); // Reset modal fields
-                                    loadUserTables(); // Reload tables in the dropdown
+    // Collect attribute data
+    for (let i = 1; i <= attributeCount; i++) {
+        const attributeName = document.getElementById(`attribute-name-${i}`)?.value.trim();
+        const insertFile = document.getElementById(`insert-file-${i}`)?.checked;
 
-                                    // Close the modal after successful creation
-                                    const myModal = bootstrap.Modal.getInstance(document.getElementById('createTableModal'));
-                                    myModal.hide();
-
-                                    // Redirect to dashboard after modal is closed
-                                    window.location.href = 'dashboard.html'; // Redirect to dashboard
-                                  
-
-                                } else {
-                                    console.error('Error creating category:', result.message);
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error creating category:', error);
-                            });
-                        } else {
-                            console.error('Failed to load existing categories:', result.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching existing categories:', error);
-                    });
+        if (attributeName) {
+            // Check for duplicate attribute names
+            if (attributeNames.has(attributeName)) {
+                alert(`Field name "${attributeName}" is already used. Please choose a different name.`);
+                return;
+            }
+            attributeNames.add(attributeName); // Add to set if unique
+            attributes.push({
+                name: attributeName,
+                type: "VARCHAR(255)", // Default type as VARCHAR
+                isFile: insertFile // Indicate if it's for file insertion
             });
+        }
+    }
+
+    try {
+        // Check if category name already exists
+        const checkResponse = await fetch(`http://127.0.0.1:8081/tables?userId=${userId}`);
+        const checkResult = await checkResponse.json();
+
+        if (checkResult.success) {
+            const existingCategoryNames = checkResult.data.map(table => table.toLowerCase());
+            if (existingCategoryNames.includes(tableName.toLowerCase())) {
+                alert('Category name is already taken. Please choose a different name.');
+                return;
+            }
+
+            // Send request to create a new category
+            const createResponse = await fetch(`http://127.0.0.1:8081/create-table`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tableName, attributes, userId })
+            });
+
+            const createResult = await createResponse.json();
+            if (createResult.success) {
+                alert('Category created successfully!');
+
+                // Reset modal fields and reload tables
+                resetModal();
+                loadUserTables();
+
+                // Close the modal after successful creation
+                const myModal = bootstrap.Modal.getInstance(document.getElementById('createTableModal'));
+                myModal.hide();
+
+                // Redirect to dashboard after modal is closed
+                window.location.href = 'dashboard.html';
+            } else {
+                // Handle backend errors
+                if (createResult.message.includes('Table already exists')) {
+                    alert('Category name is already taken. Please choose another name.');
+                } else {
+                    alert(`Error creating category: ${createResult.message}`);
+                }
+            }
+        } else {
+            alert('Failed to load existing categories. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error creating category:', error);
+        alert('An error occurred while creating the category. Please try again.');
+    }
+});
+
             
           // Handle category dropping
 document.getElementById('confirm-drop').addEventListener('click', () => {

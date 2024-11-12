@@ -100,7 +100,7 @@
         <div class="card mt-3" id="table-content">
             <div class="card-body">
                 <div id="card-details"></div>
-                <button class="btn btn-success" id="add-row-button" data-bs-toggle="modal" data-bs-target="#rowModal">Add New Row</button>
+                <button class="btn btn-success" id="add-row-button" data-bs-toggle="modal" data-bs-target="#rowModal">Add New Record</button>
             </div>
         </div>
     </div>
@@ -110,7 +110,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="rowModalLabel">Add New Row</h5>
+                    <h5 class="modal-title" id="rowModalLabel">Add New Record</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -189,7 +189,7 @@
                 ])
                 .then(([dataResponse, schemaResponse]) => {
                     if (!dataResponse.data || dataResponse.data.length === 0) {
-                        document.getElementById('card-details').innerHTML = 'No data found for this table.';
+                        document.getElementById('card-details').innerHTML = 'No data found in this Category.';
                         return;
                     }
                     if (!schemaResponse.data || schemaResponse.data.length === 0) {
