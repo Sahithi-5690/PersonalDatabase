@@ -203,32 +203,33 @@
 }
 
 
-    document.getElementById('editCategoryModal').addEventListener('hidden.bs.modal', () => {
-        document.getElementById('edit-attributes-container').innerHTML = '';
-        window.location.href = 'dashboard.html';
-    });
+    // Reset modal and clear attribute container when the edit modal is closed
+document.getElementById('editCategoryModal').addEventListener('hidden.bs.modal', () => {
+    document.getElementById('edit-attributes-container').innerHTML = '';
+    removeAttributes = []; // Reset the array when the modal is closed
+    window.location.href = 'dashboard.html';
+});
 
-    const removeAttributes = [];
+// Declare `removeAttributes` globally
+let removeAttributes = [];
 
-    document.addEventListener('click', (event) => {
+// Handle removing attributes from the form
+document.addEventListener('click', (event) => {
     if (event.target.classList.contains('remove-edit-attribute')) {
         const attributeName = event.target.dataset.attributeName;
         const attributeDiv = event.target.closest('.attribute');
 
-        if (attributeName) {
-            // Track the removed attribute name
-            if (!removeAttributes.includes(attributeName)) {
-                removeAttributes.push(attributeName);
-            }
-            // Mark the attribute as removed
-            attributeDiv.classList.add('removed');
+        if (attributeName && !removeAttributes.includes(attributeName)) {
+            removeAttributes.push(attributeName); // Track the removed attribute name
         }
 
-        // Remove the attribute element from the DOM
+        // Mark the attribute as removed and remove it from the DOM
+        attributeDiv.classList.add('removed');
         attributeDiv.remove();
     }
 });
 
+// Form submission handler for updating the category
 document.getElementById('edit-category-form').addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -236,7 +237,6 @@ document.getElementById('edit-category-form').addEventListener('submit', async (
     const renameAttributes = [];
     const dataTypeChanges = [];
     const attributeNames = new Set();
-    const removeAttributes = [];
     const userId = localStorage.getItem('userId');
     const tableName = document.getElementById('edit-category-select').value;
     const newCategoryName = document.getElementById('new-category-name').value.trim() || tableName;
@@ -329,7 +329,6 @@ document.getElementById('edit-category-form').addEventListener('submit', async (
         alert('An error occurred while updating the category. Please try again.');
     }
 });
-
 });
 
 

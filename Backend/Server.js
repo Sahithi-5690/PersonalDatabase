@@ -776,126 +776,105 @@ app.put('/update-category', (req, res) => {
             };
 
             function proceedWithUpdates() {
-                try {
-                    const attributePromises = [];
-                    if (newAttributes && newAttributes.length > 0) {
-                        newAttributes.forEach(({ name, isFile }) => {
-                            attributePromises.push(new Promise((resolve, reject) => {
-                                if (!name) {
-                                    return reject(new Error(`Attribute name cannot be empty. Provided: name=${name}`));
-                                }
+                const attributePromises = [];
 
-                                // Determine SQL data type and semantic type based on `isFile`
-                                const sqlType = 'VARCHAR(255)';  // Using VARCHAR(255) for file or text storage
-                                const semanticType = isFile ? 'FILE' : 'VARCHAR';
+                // Handle new attributes
+                if (Array.isArray(newAttributes) && newAttributes.length > 0) {
+                    newAttributes.forEach(({ name, isFile }) => {
+                        attributePromises.push(new Promise((resolve, reject) => {
+                            if (!name) return reject(new Error(`Attribute name cannot be empty. Provided: ${name}`));
 
-                                // Check if the attribute already exists
-                                const checkAttributeQuery = 'SELECT COUNT(*) AS count FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?';
-                                connection.query(checkAttributeQuery, [process.env.DB_NAME, categoryName, name], (error, results) => {
+                            const sqlType = isFile ? 'VARCHAR(255)' : 'VARCHAR(255)';
+                            const semanticType = isFile ? 'FILE' : 'VARCHAR';
+
+                            const checkQuery = 'SELECT COUNT(*) AS count FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?';
+                            connection.query(checkQuery, [process.env.DB_NAME, categoryName, name], (error, results) => {
+                                if (error) return reject(error);
+                                if (results[0].count > 0) return resolve();
+
+                                const addQuery = `ALTER TABLE ?? ADD ?? ${sqlType}`;
+                                connection.query(addQuery, [categoryName, name], (error) => {
                                     if (error) return reject(error);
-                                    if (results[0].count > 0) {
-                                        console.log(`Attribute "${name}" already exists in category "${categoryName}". Skipping.`);
-                                        return resolve();
-                                    }
 
-                                    // Add the new attribute if it doesn't exist
-                                    const addQuery = `ALTER TABLE ?? ADD ?? ${sqlType}`;
-                                    connection.query(addQuery, [categoryName, name], (error) => {
-                                        if (error) return reject(error);
-
-                                        // Add new attribute to table_metadata
-                                        const insertMetaQuery = `INSERT INTO table_metadata (tableName, attributeName, semanticType) VALUES (?, ?, ?)`;
-                                        connection.query(insertMetaQuery, [categoryName, name, semanticType], (metaError) => {
-                                            if (metaError) return reject(metaError);
-                                            resolve();
-                                        });
+                                    const insertMetaQuery = `INSERT INTO table_metadata (tableName, attributeName, semanticType) VALUES (?, ?, ?)`;
+                                    connection.query(insertMetaQuery, [categoryName, name, semanticType], (metaError) => {
+                                        if (metaError) return reject(metaError);
+                                        resolve();
                                     });
                                 });
-                            }));
-                        });
-                    }
-
-                    Promise.all(attributePromises).then(() => proceedWithOtherUpdates()).catch(handleError);
-                } catch (error) {
-                    handleError(error);
+                            });
+                        }));
+                    });
                 }
+
+                Promise.all(attributePromises).then(proceedWithOtherUpdates).catch(handleError);
             }
 
             function proceedWithOtherUpdates() {
-                try {
-                    const renamePromises = [];
-                    const dataTypePromises = [];
-                    const removePromises = [];
+                const renamePromises = [];
+                const dataTypePromises = [];
+                const removePromises = [];
 
-                    // Handle renaming attributes
-                    if (renameAttributes && renameAttributes.length > 0) {
-                        renameAttributes.forEach(({ oldName, newName }) => {
-                            if (!oldName || !newName) {
-                                throw new Error(`Attribute names cannot be empty. oldName=${oldName}, newName=${newName}`);
-                            }
+                // Handle renaming attributes
+                if (Array.isArray(renameAttributes) && renameAttributes.length > 0) {
+                    renameAttributes.forEach(({ oldName, newName }) => {
+                        renamePromises.push(new Promise((resolve, reject) => {
                             const renameQuery = 'ALTER TABLE ?? CHANGE ?? ?? VARCHAR(255)';
-                            renamePromises.push(new Promise((resolve, reject) => {
-                                connection.query(renameQuery, [categoryName, oldName, newName], (error) => {
-                                    if (error) return reject(error);
+                            connection.query(renameQuery, [categoryName, oldName, newName], (error) => {
+                                if (error) return reject(error);
 
-                                    // Update table_metadata with new attribute name
-                                    const updateMetaQuery = `UPDATE table_metadata SET attributeName = ? WHERE tableName = ? AND attributeName = ?`;
-                                    connection.query(updateMetaQuery, [newName, categoryName, oldName], (metaError) => {
-                                        if (metaError) return reject(metaError);
-                                        resolve();
-                                    });
+                                const updateMetaQuery = `UPDATE table_metadata SET attributeName = ? WHERE tableName = ? AND attributeName = ?`;
+                                connection.query(updateMetaQuery, [newName, categoryName, oldName], (metaError) => {
+                                    if (metaError) return reject(metaError);
+                                    resolve();
                                 });
-                            }));
-                        });
-                    }
-
-                   // Handle changing attribute data types
-if (dataTypeChanges && dataTypeChanges.length > 0) {
-    dataTypeChanges.forEach(({ name, newType, isFile }) => {
-        const sqlType = 'VARCHAR(255)'; // Default VARCHAR(255) for files and text
-        const semanticType = isFile ? 'FILE' : 'VARCHAR'; // Set `semanticType` based on `isFile`
-
-        const alterQuery = `ALTER TABLE ?? MODIFY ?? ${sqlType}`;
-        dataTypePromises.push(new Promise((resolve, reject) => {
-            connection.query(alterQuery, [categoryName, name], (error) => {
-                if (error) return reject(error);
-
-                // Update `table_metadata` with the new `semanticType`
-                const updateMetaQuery = `UPDATE table_metadata SET semanticType = ? WHERE tableName = ? AND attributeName = ?`;
-                connection.query(updateMetaQuery, [semanticType, categoryName, name], (metaError) => {
-                    if (metaError) return reject(metaError);
-                    resolve();
-                });
-            });
-        }));
-    });
-}
-
-                    // Handle removing attributes
-                    if (removeAttributes && removeAttributes.length > 0) {
-                        removeAttributes.forEach((attr) => {
-                            const dropQuery = 'ALTER TABLE ?? DROP COLUMN ??';
-                            const metaDeleteQuery = 'DELETE FROM table_metadata WHERE tableName = ? AND attributeName = ?';
-                            removePromises.push(new Promise((resolve, reject) => {
-                                connection.query(dropQuery, [categoryName, attr], (error) => {
-                                    if (error) return reject(error);
-
-                                    // Remove from table_metadata
-                                    connection.query(metaDeleteQuery, [categoryName, attr], (metaError) => {
-                                        if (metaError) return reject(metaError);
-                                        resolve();
-                                    });
-                                });
-                            }));
-                        });
-                    }
-
-                    Promise.all([...renamePromises, ...dataTypePromises, ...removePromises])
-                        .then(() => proceedWithCategoryRename())
-                        .catch(handleError);
-                } catch (error) {
-                    handleError(error);
+                            });
+                        }));
+                    });
                 }
+
+                // Handle changing attribute data types
+                if (Array.isArray(dataTypeChanges) && dataTypeChanges.length > 0) {
+                    dataTypeChanges.forEach(({ name, newType, isFile }) => {
+                        const sqlType = 'VARCHAR(255)';
+                        const semanticType = isFile ? 'FILE' : 'VARCHAR';
+
+                        dataTypePromises.push(new Promise((resolve, reject) => {
+                            const alterQuery = `ALTER TABLE ?? MODIFY ?? ${sqlType}`;
+                            connection.query(alterQuery, [categoryName, name], (error) => {
+                                if (error) return reject(error);
+
+                                const updateMetaQuery = `UPDATE table_metadata SET semanticType = ? WHERE tableName = ? AND attributeName = ?`;
+                                connection.query(updateMetaQuery, [semanticType, categoryName, name], (metaError) => {
+                                    if (metaError) return reject(metaError);
+                                    resolve();
+                                });
+                            });
+                        }));
+                    });
+                }
+
+                // Handle removing attributes
+                if (Array.isArray(removeAttributes) && removeAttributes.length > 0) {
+                    removeAttributes.forEach((attr) => {
+                        removePromises.push(new Promise((resolve, reject) => {
+                            const dropQuery = 'ALTER TABLE ?? DROP COLUMN ??';
+                            connection.query(dropQuery, [categoryName, attr], (error) => {
+                                if (error) return reject(error);
+
+                                const metaDeleteQuery = 'DELETE FROM table_metadata WHERE tableName = ? AND attributeName = ?';
+                                connection.query(metaDeleteQuery, [categoryName, attr], (metaError) => {
+                                    if (metaError) return reject(metaError);
+                                    resolve();
+                                });
+                            });
+                        }));
+                    });
+                }
+
+                Promise.all([...renamePromises, ...dataTypePromises, ...removePromises])
+                    .then(proceedWithCategoryRename)
+                    .catch(handleError);
             }
 
             function proceedWithCategoryRename() {
@@ -903,18 +882,14 @@ if (dataTypeChanges && dataTypeChanges.length > 0) {
                     const renameCategoryQuery = 'ALTER TABLE ?? RENAME TO ??';
                     connection.query(renameCategoryQuery, [categoryName, newCategoryName], (error) => {
                         if (error) return handleError(error);
-            
-                        // Update `table_metadata` table with the new category name
-                        const updateMetadataQuery = 'UPDATE table_metadata SET tableName = ? WHERE tableName = ?';
-                        connection.query(updateMetadataQuery, [newCategoryName, categoryName], (metaError) => {
+
+                        const updateMetaQuery = 'UPDATE table_metadata SET tableName = ? WHERE tableName = ?';
+                        connection.query(updateMetaQuery, [newCategoryName, categoryName], (metaError) => {
                             if (metaError) return handleError(metaError);
-            
-                            // Update `user_tables` table with the new category name
+
                             const updateUserTablesQuery = 'UPDATE user_tables SET tableName = ? WHERE tableName = ?';
                             connection.query(updateUserTablesQuery, [newCategoryName, categoryName], (userTablesError) => {
                                 if (userTablesError) return handleError(userTablesError);
-            
-                                // Commit the transaction after all updates
                                 commitTransaction();
                             });
                         });
@@ -923,7 +898,7 @@ if (dataTypeChanges && dataTypeChanges.length > 0) {
                     commitTransaction();
                 }
             }
-            
+
             function commitTransaction() {
                 connection.commit((err) => {
                     if (err) {
