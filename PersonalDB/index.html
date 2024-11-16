@@ -30,6 +30,8 @@
             <div class="input-group">
                 <input type="password" id="rPassword" placeholder=" " required>
                 <label for="rPassword">Password</label>
+                <!-- Eye Icon for Password Toggle -->
+                <i class="fa fa-eye toggle-password" id="toggleRPassword"></i>
             </div>
             <button type="submit" class="btn">Register</button>
         </form>
@@ -50,6 +52,8 @@
             <div class="input-group">
                 <input type="password" id="password" placeholder=" " required>
                 <label for="password">Password</label>
+                <!-- Eye Icon for Password Toggle -->
+                <i class="fa fa-eye toggle-password" id="togglePassword"></i>
             </div>
             <button type="submit" class="btn">Login</button>
         </form>
@@ -60,6 +64,7 @@
     </div>
 
     <script>
+        // Existing code for form toggle
         const signUpButton = document.getElementById('signUpButton');
         const signInButton = document.getElementById('signInButton');
         const signupForm = document.getElementById('signup');
@@ -83,6 +88,26 @@
 
         signUpButton.addEventListener('click', showSignUpForm);
         signInButton.addEventListener('click', showSignInForm);
+
+        // Password visibility toggle functionality
+        const toggleRPassword = document.getElementById('toggleRPassword');
+        const togglePassword = document.getElementById('togglePassword');
+        const rPasswordInput = document.getElementById('rPassword');
+        const passwordInput = document.getElementById('password');
+
+        function togglePasswordVisibility(input, icon) {
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        // Event listeners for the password toggle icons
+        toggleRPassword.addEventListener('click', () => togglePasswordVisibility(rPasswordInput, toggleRPassword));
+        togglePassword.addEventListener('click', () => togglePasswordVisibility(passwordInput, togglePassword));
     </script>
 </body>
 </html>

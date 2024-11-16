@@ -69,6 +69,22 @@ input:focus {
     box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
     outline: none;
 }
+/* Toggle Password Icon Styling */
+.toggle-password {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px;
+    color: #B0B0B0;
+    transition: color 0.3s;
+}
+
+.toggle-password:hover {
+    color: #007BFF;
+}
+
 
 /* Label Styling */
 label {
