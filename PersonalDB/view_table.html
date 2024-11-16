@@ -43,9 +43,8 @@
         <div class="card mt-3" id="table-content">
             <div class="card-body">
                 <div id="card-details"></div>
-                <div class="text-center">
                     <button id="add-table-btn" class="btn">+</button>
-                </div>
+               
                 
             </div>
         </div>
@@ -96,7 +95,7 @@
             loadTableDataAndMetadata(tableName);
     
             // Load dynamic fields when opening the modal
-            document.getElementById('add-row-button').addEventListener('click', () => {
+            document.getElementById('add-table-btn').addEventListener('click', () => {
                 loadDynamicFields(); // Load dynamic fields for new row
                 document.getElementById('row-id').value = ''; // Reset the hidden ID field
             });
