@@ -245,3 +245,132 @@ body {
 .modal-content {
     animation: fadeInModal 0.3s ease-in-out;
 }
+/* Table Container */
+.table-container {
+    padding: 20px;
+    background-color: #FFF7E1; /* Soft Cream Background */
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Table Styling */
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+/* Table Header */
+.table thead th {
+    background: linear-gradient(135deg, #9575CD, #7E57C2);
+    color: #FFFFFF;
+    font-weight: bold;
+    padding: 15px;
+    text-align: left;
+    border-bottom: 2px solid #D1C4E9;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+}
+
+/* Table Rows */
+.table tbody tr {
+    background-color: #FFFFFF;
+    transition: all 0.3s ease-in-out;
+    border-radius: 15px;
+}
+
+.table tbody tr:hover {
+    background-color: #F3E5F5; /* Light Lavender Hover Effect */
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Cells */
+.table td {
+    padding: 15px;
+    color: #4A4A4A;
+    border-bottom: 1px solid #E0E0E0;
+    font-size: 0.95rem;
+}
+
+/* Actions Column */
+.table .actions {
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Edit and Delete Buttons */
+.btn-edit,
+.btn-delete {
+    padding: 8px 15px;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Edit Button */
+.btn-edit {
+    background-color: #7E57C2;
+    color: #FFFFFF;
+    border: none;
+    font-weight: bold;
+}
+
+.btn-edit:hover {
+    background-color: #9575CD;
+    transform: scale(1.05);
+}
+
+/* Delete Button */
+.btn-delete {
+    background-color: #E57373;
+    color: #FFFFFF;
+    border: none;
+    font-weight: bold;
+}
+
+.btn-delete:hover {
+    background-color: #F44336;
+    transform: scale(1.05);
+}
+
+/* Add New Record Button */
+#add-table-btn {
+    font-size: 1.1rem;
+    padding: 12px 25px;
+    border-radius: 30px;
+    background-color: #66BB6A; /* Fresh Mint Green */
+    color: #FFFFFF;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    display: block;
+    margin: 20px auto;
+    width: fit-content;
+}
+
+#add-table-btn:hover {
+    background-color: #81C784;
+    transform: translateY(-3px) scale(1.05);
+}
+
+/* Table Animations */
+@keyframes fadeInTable {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.table {
+    animation: fadeInTable 0.5s ease-in-out;
+}

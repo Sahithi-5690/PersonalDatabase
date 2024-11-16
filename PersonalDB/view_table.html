@@ -43,7 +43,10 @@
         <div class="card mt-3" id="table-content">
             <div class="card-body">
                 <div id="card-details"></div>
-                <button class="btn btn-success" id="add-row-button" data-bs-toggle="modal" data-bs-target="#rowModal">Add New Record</button>
+                <div class="text-center">
+                    <button id="add-table-btn" class="btn">+</button>
+                </div>
+                
             </div>
         </div>
     </div>
@@ -147,47 +150,57 @@
                 });
             }
     
-            // Function to render table data in a tabular form
+            // Function to render table data in a styled tabular form
 function renderTable(data, schema) {
+    // Start building the HTML for the table
     let tableHTML = `
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    ${Object.keys(data[0]).map(key => key !== 'id' ? `<th>${key}</th>` : '').join('')}
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        ${Object.keys(data[0])
+                            .map((key) => (key !== 'id' ? `<th>${key}</th>` : ''))
+                            .join('')}
+                        <th class="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
 
-    data.forEach(row => {
+    // Loop through each row of data and build the table body
+    data.forEach((row) => {
         tableHTML += `
             <tr data-row-id="${row.id}">
-                ${Object.keys(row).map(key => {
-                    if (key !== 'id') {
-                        const value = row[key];
-                        // Check if the value is a Google Drive link
-                        if (value && typeof value === 'string' && value.startsWith('https://drive.google.com/')) {
-                            // Display as a clickable link to the Google Drive file
-                            return `<td><a href="${value}" target="_blank">View File</a></td>`;
+                ${Object.keys(row)
+                    .map((key) => {
+                        if (key !== 'id') {
+                            const value = row[key];
+                            // Check if the value is a Google Drive link
+                            if (value && typeof value === 'string' && value.startsWith('https://drive.google.com/')) {
+                                // Display as a clickable link to the Google Drive file
+                                return `<td><a href="${value}" target="_blank">View File</a></td>`;
+                            }
+                            return `<td>${value}</td>`;
                         }
-                        return `<td>${value}</td>`;
-                    }
-                    return '';
-                }).join('')}
-                <td>
-                    <button class="btn btn-warning btn-sm edit-row" data-id="${row.id}">Edit</button>
-                    <button class="btn btn-danger btn-sm delete-row" data-id="${row.id}">Delete</button>
+                        return '';
+                    })
+                    .join('')}
+                <td class="actions">
+                    <button class="btn-edit btn-sm" data-id="${row.id}">Edit</button>
+                    <button class="btn-delete btn-sm" data-id="${row.id}">Delete</button>
                 </td>
             </tr>
         `;
     });
 
-    tableHTML += `</tbody></table>`;
+    // Close the table and container
+    tableHTML += `</tbody></table></div>`;
+
+    // Inject the table HTML into the page
     document.getElementById('card-details').innerHTML = tableHTML;
 
-    // Edit Row Button
-    document.querySelectorAll('.edit-row').forEach(button => {
+    // Add event listeners for edit and delete buttons
+    document.querySelectorAll('.btn-edit').forEach((button) => {
         button.addEventListener('click', async () => {
             const rowId = button.getAttribute('data-id');
             document.getElementById('row-id').value = rowId;
@@ -200,8 +213,7 @@ function renderTable(data, schema) {
         });
     });
 
-    // Delete Row Button
-    document.querySelectorAll('.delete-row').forEach(button => {
+    document.querySelectorAll('.btn-delete').forEach((button) => {
         button.addEventListener('click', async () => {
             const rowId = button.getAttribute('data-id');
             const confirmDelete = confirm("Are you sure you want to delete this row? This action cannot be undone.");
@@ -209,9 +221,7 @@ function renderTable(data, schema) {
                 try {
                     await deleteRow(rowId, tableName);
                     alert("Row deleted successfully.");
-                    setTimeout(() => {
-                        location.reload();
-                    }, 500);
+                    location.reload();
                 } catch (error) {
                     alert("Error deleting row: " + error.message);
                 }
