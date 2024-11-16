@@ -248,9 +248,9 @@ body {
 /* Table Container */
 .table-container {
     padding: 20px;
-    background-color: #FFF7E1; /* Soft Cream Background */
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    background-color: #F2F2F2; /* Light background for contrast */
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Table Styling */
@@ -258,35 +258,30 @@ body {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    border-radius: 20px;
+    border-radius: 15px;
     overflow: hidden;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* Table Header */
 .table thead th {
     background: linear-gradient(135deg, #9575CD, #7E57C2);
-    color: #FFFFFF;
+    color: #FFF;
     font-weight: bold;
     padding: 15px;
     text-align: left;
     border-bottom: 2px solid #D1C4E9;
-    font-size: 1rem;
-    letter-spacing: 0.5px;
 }
 
 /* Table Rows */
 .table tbody tr {
     background-color: #FFFFFF;
-    transition: all 0.3s ease-in-out;
-    border-radius: 15px;
+    transition: all 0.2s ease-in-out;
 }
 
 .table tbody tr:hover {
-    background-color: #F3E5F5; /* Light Lavender Hover Effect */
-    transform: translateY(-3px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background-color: #F3E5F5; /* Light hover effect */
+    transform: scale(1.01);
 }
 
 /* Table Cells */
@@ -294,7 +289,6 @@ body {
     padding: 15px;
     color: #4A4A4A;
     border-bottom: 1px solid #E0E0E0;
-    font-size: 0.95rem;
 }
 
 /* Actions Column */
@@ -306,71 +300,98 @@ body {
 /* Edit and Delete Buttons */
 .btn-edit,
 .btn-delete {
-    padding: 8px 15px;
-    border-radius: 25px;
+    padding: 5px 10px;
+    border-radius: 20px;
     font-size: 0.9rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
 }
 
-/* Edit Button */
 .btn-edit {
     background-color: #7E57C2;
-    color: #FFFFFF;
+    color: #FFF;
     border: none;
-    font-weight: bold;
 }
 
 .btn-edit:hover {
     background-color: #9575CD;
-    transform: scale(1.05);
 }
 
-/* Delete Button */
 .btn-delete {
     background-color: #E57373;
-    color: #FFFFFF;
+    color: #FFF;
     border: none;
-    font-weight: bold;
 }
 
 .btn-delete:hover {
     background-color: #F44336;
-    transform: scale(1.05);
 }
-
-/* Add New Record Button */
-#add-table-btn {
-    font-size: 1.1rem;
-    padding: 12px 25px;
-    border-radius: 30px;
+/* Specific styling for the Add New Record button in view_table.html */
+#add-row-button {
+    position: fixed;
+    bottom: 20px; /* Adjust the bottom position */
+    right: 20px;  /* Adjust the right position */
+    width: 50px;  /* Smaller width */
+    height: 50px; /* Smaller height */
     background-color: #66BB6A; /* Fresh Mint Green */
     color: #FFFFFF;
+    border-radius: 50%;
     border: none;
+    font-size: 1.8rem; /* Smaller icon size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
     transition: all 0.3s ease;
-    display: block;
-    margin: 20px auto;
-    width: fit-content;
+    z-index: 1000;
 }
 
-#add-table-btn:hover {
-    background-color: #81C784;
-    transform: translateY(-3px) scale(1.05);
+/* Tooltip specific for view_table.html */
+#add-row-button:hover + .tooltip-text {
+    opacity: 1;
+    visibility: visible;
 }
 
-/* Table Animations */
-@keyframes fadeInTable {
-    from {
+/* Tooltip styling */
+.tooltip-text {
+    position: fixed;
+    bottom: 80px;
+    right: 30px;
+    background-color: #616161;
+    color: #FFFFFF;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out;
+}
+/* Enhanced Styling for Category Title in view_table.html */
+#table-title {
+    color: #7E57C2;
+    font-size: 3rem; /* Increase the size for better visibility */
+    font-weight: bold;
+    text-align: center;
+    margin-top: 20px;
+    animation: fadeInCategoryTitle 1s ease-in-out;
+    letter-spacing: 1.5px;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #9575CD, #7E57C2);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+
+/* Animation for Category Title */
+@keyframes fadeInCategoryTitle {
+    0% {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(-20px);
     }
-    to {
+    100% {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-.table {
-    animation: fadeInTable 0.5s ease-in-out;
 }

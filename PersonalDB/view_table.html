@@ -39,14 +39,20 @@
         </div>
     </nav>
     <div class="container" style="padding-top: 4%;">
-        <h1 id="table-title">Table Name</h1>
+        <h1 id="table-title" class="category-title">Table Name</h1>
         <div class="card mt-3" id="table-content">
             <div class="card-body">
                 <div id="card-details"></div>
-                <button class="btn btn-success" id="add-row-button" data-bs-toggle="modal" data-bs-target="#rowModal"><i class="fas fa-plus"></i></button>
             </div>
         </div>
+        <!-- Add New Record Button with Tooltip in view_table.html -->
+<button class="btn btn-success add-record-btn" id="add-row-button" data-bs-toggle="modal" data-bs-target="#rowModal">
+    <i class="fas fa-plus"></i>
+</button>
+<div class="tooltip-text">Add New Record</div>
+
     </div>
+    
 
     <!-- Modal for Add/Edit Row -->
     <div class="modal fade" id="rowModal" tabindex="-1" aria-labelledby="rowModalLabel" aria-hidden="true">
