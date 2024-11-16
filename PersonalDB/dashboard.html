@@ -48,6 +48,8 @@
         <button type="button" class="btn btn-danger" id="drop-table-btn" data-bs-toggle="modal" data-bs-target="#dropTableModal">- Drop Category</button>
         <button type="button" class="btn btn-primary" id="edit-category-btn" data-bs-toggle="modal" data-bs-target="#editCategoryModal">Edit Category</button>
     </div>
+    <div id="category-cards-container" class="d-flex flex-wrap justify-content-start"></div>
+
 
     <!-- Modal for creating a new table -->
     <div class="modal fade" id="createTableModal" tabindex="-1" aria-labelledby="createTableModalLabel" aria-hidden="true">
@@ -356,38 +358,58 @@ document.getElementById('add-edit-attribute').addEventListener('click', function
         newAttribute.remove(); // Remove the attribute field
     });
 });
+// Function to create a new card for the category
+function createCategoryCard(categoryName) {
+    const categoryCardsContainer = document.getElementById('category-cards-container');
+    const card = document.createElement('div');
+    card.classList.add('card', 'm-2', 'shadow-sm');
+    card.style.width = '18rem';
+    card.innerHTML = `
+        <div class="card-header">${categoryName}</div>
+        <div class="card-body">
+            <p class="card-text">Click to view ${categoryName} details.</p>
+            <button class="btn btn-primary view-category-btn" data-category="${categoryName}">View Category</button>
+        </div>
+    `;
+    card.querySelector('.view-category-btn').addEventListener('click', () => {
+        window.location.href = `view_table.html?table=${categoryName}`;
+    });
+    categoryCardsContainer.appendChild(card);
+}
 
-        // Function to load user-specific table names into the dropdown menu
-        function loadUserTables() {
-            const userId = localStorage.getItem('userId');
-            fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        const dropdownMenu = document.getElementById('dropdown-menu');
-                        dropdownMenu.innerHTML = ''; // Clear any existing dropdown items
+        // Load user-specific tables into the dropdown menu and create card views
+function loadUserTables() {
+    const userId = localStorage.getItem('userId');
+    fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const dropdownMenu = document.getElementById('dropdown-menu');
+                const dropTableSelect = document.getElementById('drop-table-select');
+                const categoryCardsContainer = document.getElementById('category-cards-container');
+                dropdownMenu.innerHTML = '';
+                dropTableSelect.innerHTML = '<option value="">Select Category to Drop</option>';
+                categoryCardsContainer.innerHTML = '';
 
-                        // Populate dropdown menu for categories
-                        const dropTableSelect = document.getElementById('drop-table-select');
-                        dropTableSelect.innerHTML = ''; // Clear previous options
-                        dropTableSelect.appendChild(new Option('Select Category to Drop', ''));
+                result.data.forEach(table => {
+                    // Populate dropdown menu
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a class="dropdown-item" href="view_table.html?table=${table}">${table}</a>`;
+                    dropdownMenu.appendChild(li);
 
-                        result.data.forEach(table => {
-                            const li = document.createElement('li');
-                            li.innerHTML = `<a class="dropdown-item" href="view_table.html?table=${table}">${table}</a>`;
-                            dropdownMenu.appendChild(li);
+                    // Populate drop category select
+                    dropTableSelect.appendChild(new Option(table, table));
 
-                            // Add option to drop select
-                            dropTableSelect.appendChild(new Option(table, table));
-                        });
-                    } else {
-                        console.error('Failed to load tables:', result.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching tables:', error);
+                    // Create card view for each category
+                    createCategoryCard(table);
                 });
-        }
+            } else {
+                console.error('Failed to load tables:', result.message);
+            }
+        })
+        .catch(error => console.error('Error fetching tables:', error));
+}
+
 
         document.addEventListener('DOMContentLoaded', () => {
             const userId = localStorage.getItem('userId');
@@ -473,7 +495,7 @@ document.getElementById('create-table-form').addEventListener('submit', async (e
                 alert(`Field name "${attributeName}" is already used. Please choose a different name.`);
                 return;
             }
-            attributeNames.add(attributeName); // Add to set if unique
+            attributeNames.add(attributeName);
             attributes.push({
                 name: attributeName,
                 type: "VARCHAR(255)", // Default type as VARCHAR
@@ -511,6 +533,9 @@ document.getElementById('create-table-form').addEventListener('submit', async (e
                 resetModal();
                 loadUserTables();
 
+                // Create a new card for the category
+                createCategoryCard(tableName); // <--- New code added here
+
                 // Close the modal after successful creation
                 const myModal = bootstrap.Modal.getInstance(document.getElementById('createTableModal'));
                 myModal.hide();
@@ -534,7 +559,7 @@ document.getElementById('create-table-form').addEventListener('submit', async (e
     }
 });
 
-            
+          
           // Handle category dropping
 document.getElementById('confirm-drop').addEventListener('click', () => {
     const categoryToDrop = document.getElementById('drop-table-select').value;
