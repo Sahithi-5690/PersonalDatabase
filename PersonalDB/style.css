@@ -1,260 +1,247 @@
 @import url('https://fonts.googleapis.com/css?family=Raleway:400,700');
 
 * {
-	box-sizing: border-box;
-	margin: 0;
-	padding: 0;	
-	font-family: Raleway, sans-serif;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Raleway, sans-serif;
 }
 
+/* Body Styling */
 body {
-	background: linear-gradient(#776BCC,  #776BCC);		
+    background: #E3F2FD; /* Soft Mint */
+    color: #FFFFFF;
 }
-
-/* .container {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 100vh;
-} */
-
-.screen {		
-	background: linear-gradient(90deg,#776BCC, #776BCC);		
-	position: relative;	
-	height: 300px;
-	width: 360px;	
-	box-shadow: 0px 0px 24px #5C5696;
-}
-
-.screen__content {
-	z-index: 1;
-	position: relative;	
-	height: 100%;
-}
-
-.screen__background {		
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 0;
-	-webkit-clip-path: inset(0 0 0 0);
-	clip-path: inset(0 0 0 0);	
-}
-
-.screen__background__shape {
-	transform: rotate(45deg);
-	position: absolute;
-}
-
-.screen__background__shape1 {
-	height: 520px;
-	width: 520px;
-	background: #FFF;	
-	top: -50px;
-	right: 120px;	
-	border-radius: 0 72px 0 0;
-}
-
-.screen__background__shape2 {
-	height: 220px;
-	width: 220px;
-	background: #6C63AC;	
-	top: -172px;
-	right: 0;	
-	border-radius: 32px;
-}
-
-.screen__background__shape3 {
-	height: 540px;
-	width: 190px;
-	background: linear-gradient(270deg, #5D54A4, #6A679E);
-	top: -24px;
-	right: 0;	
-	border-radius: 32px;
-}
-
-.screen__background__shape4 {
-	height: 400px;
-	width: 200px;
-	background: #7E7BB9;	
-	top: 420px;
-	right: 50px;	
-	border-radius: 60px;
-}
-
-.login {
-	width: 320px;
-	padding: 30px;
-}
-
-.login__field {
-	padding: 20px 0px;	
-	position: relative;	
-}
-
-.login__icon {
-	position: absolute;
-	top: 30px;
-	color: #7875B5;
-}
-
-.login__input {
-	border: none;
-	border-bottom: 2px solid #D1D1D4;
-	background: none;
-	padding: 10px;
-	padding-left: 24px;
-	font-weight: 700;
-	width: 75%;
-	transition: .2s;
-}
-
-.login__input:active,
-.login__input:focus,
-.login__input:hover {
-	outline: none;
-	border-bottom-color: #6A679E;
-}
-
-.login__submit {
-	background: #fff;
-	font-size: 14px;
-	margin-top: 30px;
-	padding: 16px 20px;
-	border-radius: 26px;
-	border: 1px solid #D4D3E8;
-	text-transform: uppercase;
-	font-weight: 700;
-	display: flex;
-	align-items: center;
-	width: fit-content;
-	color: #4C489D;
-	box-shadow: 0px 2px 2px #5C5696;
-	cursor: pointer;
-	transition: .2s;
-}
-
-.login__submit:active,
-.login__submit:focus,
-.login__submit:hover {
-	border-color: #6A679E;
-	outline: none;
-}
-
-.button__icon {
-	font-size: 24px;
-	margin-left: auto;
-	color: #7875B5;
-}
-
-.social-login {	
-	position: absolute;
-	height: 94px;
-    width: 229px;
-	text-align: center;
-	bottom: 0px;
-	right: 0px;
-	color: #776bcc;
-}
-
-.social-icons {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.social-login__icon {
-	padding: 20px 10px;
-	color: #776bcc;
-	text-decoration: none;	
-	text-shadow: 0px 0px 8px #7875B5;
-}
-
-.social-login__icon:hover {
-	transform: scale(1.5);	
-}
-
-.fab{
-	margin: 0px;
-	padding: 0 10px;
-}
-
-
-.form-control:focus {
-    box-shadow: none;
-    border-color: #BA68C8
-}
-
-.profile-button {
-    background: rgb(99, 39, 120);
-    box-shadow: none;
-    border: none
-}
-
-.profile-button:hover {
-    background: #682773
-}
-
-.profile-button:focus {
-    background: #682773;
-    box-shadow: none
-}
-
-.profile-button:active {
-    background: #682773;
-    box-shadow: none
-}
-
-.back:hover {
-    color: #682773;
-    cursor: pointer
-}
-
-.labels {
-    font-size: 11px
-}
-
-.add-experience:hover {
-    background: #BA68C8;
-    color: #fff;
-    cursor: pointer;
-    border: solid 1px #BA68C8
-}
-
-.tile {
-	width: 70%;
-	padding: 20px;
-	margin: 20px;
-	color: hsl(37, 100%, 93%);
-	background: #209dc7;
-	outline: 20px solid hsla(117, 27%, 41%, 0.6); /* green */
-  }
-
-  .card {
-    transition: transform 0.2s;
-}
-
-.card:hover {
-    transform: scale(1.05);
-}
-
-.card-header {
-    background-color: #f8f9fa;
+/* Ensure Home link matches the other nav items */
+.nav-link.active {
+    color: #FFFFFF; /* Change this to match the color of the other links, adjust if needed */
     font-weight: bold;
 }
-#category-cards-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding-top: 20px;
+
+/* Navbar Styling */
+.custom-navbar {
+    background: #7E57C2; /* Deep Lavender */
+    padding: 10px 20px;
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
+/* Navbar Links and Brand */
+.nav-link,
+.navbar-brand {
+    color: #FFFFFF;
+    font-weight: bold;
+    transition: color 0.3s;
+}
+
+.nav-link:hover,
+.navbar-brand:hover {
+    color:#FFFFFF; /* Lighter Lavender */
+}
+
+/* Welcome Section */
+.welcome-section {
+    background: #D1C4E9; /* Light Lavender */
+    padding: 60px 20px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+/* Welcome Card Styling */
+.welcome-card {
+    background: #FFFFFF;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+/* Override Bootstrap active link color */
+.navbar-nav .nav-link.active,
+.navbar-nav .nav-link.show {
+    color: #FFFFFF !important; /* Replace with your desired color */
+    font-weight: bold;
+}
+
+/* Welcome Title */
+.welcome-title {
+    color: #7E57C2;
+    font-size: 2.5rem;
+}
+
+/* Welcome Description */
+.welcome-description {
+    color: #616161;
+    font-size: 1.1rem;
+}
+
+/* Add New Category Button */
+#add-table-btn {
+    font-size: 1.2rem;
+    padding: 10px 20px;
+    border-radius: 30px;
+    background-color: #81C784; /* Mint Green */
+    color: #FFFFFF;
+    border: none;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+#add-table-btn:hover {
+    background-color: #66BB6A; /* Darker Mint Green */
+    transform: scale(1.05);
+}
+
+/* Logout Button */
+.logout-btn {
+    font-size: 1rem;
+    padding: 5px 15px;
+    color: #81C784;
+    background: #FFFFFF;
+    border: 2px solid #81C784;
+    border-radius: 20px;
+    transition: transform 0.2s, background-color 0.3s;
+}
+
+.logout-btn:hover {
+    background-color: #81C784;
+    color: #FFFFFF;
+}
+
+/* Category Card */
 .card {
-    transition: transform 0.2s;
+    background: #D1C4E9; /* Light Lavender */
+    border-radius: 15px;
+    color: #4A4A4A;
 }
 
 .card:hover {
     transform: scale(1.05);
+}
+
+/* Card Header */
+.card-header {
+    background: #F3E5F5;
+    font-weight: bold;
+}
+
+/* Edit and Delete Buttons */
+.edit-category-btn i {
+    color: #4A4A4A;
+}
+
+.delete-category-btn i {
+    color: #E57373; /* Soft Red for Delete */
+}
+
+.edit-category-btn:hover i {
+    color: #7E57C2; /* Lavender */
+}
+
+.delete-category-btn:hover i {
+    color: #D32F2F; /* Darker Red */
+}
+/* Modal Background */
+.modal-content {
+    background: #f2e9ff; /* Soft lavender background */
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    color: #4a4a4a; /* Darker text for better readability */
+    padding: 20px;
+}
+
+/* Modal Header */
+.modal-header {
+    border-bottom: none;
+    padding-bottom: 10px;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    color: #9c27b0; /* Pastel purple for title */
+    font-weight: bold;
+}
+
+/* Close Button */
+.btn-close {
+    background-color: #9c27b0;
+    color: #fff;
+    border-radius: 50%;
+    opacity: 1;
+    transition: transform 0.2s ease;
+}
+
+.btn-close:hover {
+    transform: scale(1.1);
+}
+
+/* Modal Body */
+.modal-body {
+    padding: 10px 20px;
+    font-size: 1rem;
+}
+
+/* Form Controls */
+.form-control {
+    background: #fff;
+    border: 2px solid #d1c4e9; /* Light purple border */
+    border-radius: 10px;
+    padding: 10px;
+    color: #4a4a4a;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    border-color: #9c27b0; /* Purple focus border */
+    box-shadow: 0 0 10px rgba(156, 39, 176, 0.3);
+}
+
+/* Form Labels */
+.form-label {
+    font-weight: bold;
+    color: #7b1fa2;
+    margin-bottom: 5px;
+}
+
+/* Modal Buttons */
+.modal-footer .btn {
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    transition: transform 0.2s ease, background-color 0.3s;
+}
+
+.btn-primary {
+    background-color: #9c27b0; /* Purple button */
+    border: none;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #ab47bc; /* Lighter purple on hover */
+    transform: scale(1.05);
+}
+
+.btn-danger {
+    background-color: #e57373; /* Soft red for delete */
+    border: none;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #f44336; /* Darker red on hover */
+    transform: scale(1.05);
+}
+
+/* Modal Animations */
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-content {
+    animation: fadeInModal 0.3s ease-in-out;
 }

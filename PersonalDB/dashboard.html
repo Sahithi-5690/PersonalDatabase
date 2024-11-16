@@ -13,41 +13,43 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg bg-body-tertiary" style="box-shadow: 0 20px 35px rgb(200 240 250);">
+    <nav class="navbar navbar-expand-lg custom-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.html">Personal DB</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <a class="navbar-brand" href="dashboard.html">
+                <i class="fas fa-database"></i> Personal DB
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="dashboard.html">Home</a>
+                        <a class="nav-link active" href="dashboard.html">Home</a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             Category List
                         </a>
-                        <ul class="dropdown-menu" id="dropdown-menu">
-                            <!-- Dropdown items will be populated here -->
-                        </ul>
+                        <ul class="dropdown-menu" id="dropdown-menu"></ul>
                     </li>
                 </ul>
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <button type="button" class="btn btn-outline-danger" id="logout" style="margin-top: 8px;">Logout</button>
-                    </li>
-                </ul>
+                <button type="button" class="btn btn-outline-danger logout-btn">Logout</button>
             </div>
         </div>
     </nav>
-
-    <div class="container" style="padding-top: 4%;">
-        <h1 class="dashboard__title">Welcome to Dashboard</h1>
-        <button type="button" class="btn btn-success" id="add-table-btn" data-bs-toggle="modal" data-bs-target="#createTableModal">+ Add New Category</button>
-        <button type="button" class="btn btn-danger" id="drop-table-btn" data-bs-toggle="modal" data-bs-target="#dropTableModal">- Drop Category</button>
-        <button type="button" class="btn btn-primary" id="edit-category-btn" data-bs-toggle="modal" data-bs-target="#editCategoryModal">Edit Category</button>
+    
+    <div class="welcome-section">
+        <div class="welcome-card">
+            <h1 class="welcome-title">Welcome to Your Dashboard</h1>
+            <p class="welcome-description">
+                Manage your data effortlessly. Create, view, edit, or organize categories with a simple and intuitive interface. Click "+ Add New Category" to get started.
+            </p>
+            <button type="button" class="btn btn-primary btn-lg" id="add-table-btn" data-bs-toggle="modal" data-bs-target="#createTableModal">
+                + Add New Category
+            </button>
+        </div>
     </div>
+    
     <div id="category-cards-container" class="d-flex flex-wrap justify-content-start"></div>
 
 
@@ -106,10 +108,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <select class="form-select" id="edit-category-select" required>
-                    <option value="">Select Category to Edit</option>
-                    <!-- Options populated dynamically -->
-                </select>
                 <form id="edit-category-form" style="margin-top: 1rem;">
                     <div class="mb-3">
                         <label for="new-category-name" class="form-label">New Category Name (Optional):</label>
@@ -129,53 +127,15 @@
     
 
     <script>
-       
-       document.addEventListener('DOMContentLoaded', () => {
-    // Load categories into the dropdown when the edit button is clicked
-    document.getElementById('edit-category-btn').addEventListener('click', loadCategoriesForEdit);
-
-    function loadCategoriesForEdit() {
-        const userId = localStorage.getItem('userId');
-        fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    const editCategorySelect = document.getElementById('edit-category-select');
-                    editCategorySelect.innerHTML = '<option value="">Select Category to Edit</option>';
-
-                    result.data.forEach(table => {
-                        editCategorySelect.appendChild(new Option(table, table));
-                    });
-
-                    const myModal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
-                    myModal.show();
-                } else {
-                    console.error('Failed to load categories:', result.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching categories:', error);
-            });
-    }
-
-    // Load category details when a category is selected
-    document.getElementById('edit-category-select').addEventListener('change', function () {
-        const selectedCategory = this.value;
-        if (selectedCategory) {
-            loadCategoryDetails(selectedCategory);
-        } else {
-            document.getElementById('edit-attributes-container').innerHTML = '';
-        }
-    });
-
-    function loadCategoryDetails(tableName) {
-    fetch(`http://127.0.0.1:8081/get-table-schema/${tableName}`)
+        function loadCategoryDetails(categoryName) {
+    fetch(`http://127.0.0.1:8081/get-table-schema/${categoryName}`)
         .then(response => response.json())
         .then(result => {
             if (result.success) {
                 const attributesContainer = document.getElementById('edit-attributes-container');
                 attributesContainer.innerHTML = '';
 
+                // Populate attributes in the edit form
                 result.data.forEach(attribute => {
                     const isFileType = attribute.type === 'FILE';
                     const newAttribute = document.createElement('div');
@@ -191,17 +151,66 @@
                         <button type="button" class="btn btn-danger mt-2 remove-edit-attribute" 
                                 data-attribute-name="${attribute.name}">Remove</button>
                     `;
+
                     attributesContainer.appendChild(newAttribute);
 
+                    // Attach event listener to remove the attribute
                     newAttribute.querySelector('.remove-edit-attribute').addEventListener('click', () => {
                         newAttribute.remove();
                     });
                 });
+            } else {
+                console.error('Failed to load category details:', result.message);
             }
         })
         .catch(error => {
             console.error('Error fetching category details:', error);
         });
+}
+
+       // Load categories into the dropdown when the edit button is clicked
+       function loadCategoriesForEdit(categoryName) {
+    // Show the Edit modal directly
+    const myModal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+    myModal.show();
+
+    // Load details of the selected category
+    loadCategoryDetails(categoryName);
+}
+
+       document.addEventListener('DOMContentLoaded', () => {
+        function createCategoryCard(categoryName) {
+    const categoryCardsContainer = document.getElementById('category-cards-container');
+    const card = document.createElement('div');
+    card.classList.add('card', 'm-2', 'shadow-sm');
+    card.style.width = '18rem';
+    card.innerHTML = `
+        <div class="card-header">${categoryName}</div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <button class="btn btn-light edit-category-btn" data-category="${categoryName}">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="btn btn-light delete-category-btn" data-category="${categoryName}">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Edit functionality
+    card.querySelector('.edit-category-btn').addEventListener('click', () => {
+        loadCategoriesForEdit(categoryName); // Pass the category name directly
+    });
+
+    // Delete functionality
+    card.querySelector('.delete-category-btn').addEventListener('click', () => {
+        if (confirm(`Are you sure you want to delete the category "${categoryName}"?`)) {
+            dropCategory(categoryName);
+        }
+    });
+
+    categoryCardsContainer.appendChild(card);
 }
 
 
@@ -240,7 +249,7 @@ document.getElementById('edit-category-form').addEventListener('submit', async (
     const dataTypeChanges = [];
     const attributeNames = new Set();
     const userId = localStorage.getItem('userId');
-    const tableName = document.getElementById('edit-category-select').value;
+    const tableName = localStorage.getItem('currentCategoryName');
     const newCategoryName = document.getElementById('new-category-name').value.trim() || tableName;
 
     // Collect attribute data from the form
@@ -358,7 +367,26 @@ document.getElementById('add-edit-attribute').addEventListener('click', function
         newAttribute.remove(); // Remove the attribute field
     });
 });
-// Function to create a new card for the category
+// Define dropCategory function here
+function dropCategory(categoryName) {
+    const userId = localStorage.getItem('userId');
+    fetch(`http://127.0.0.1:8081/drop-table`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tableName: categoryName, userId })
+    })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('Category deleted successfully');
+                loadUserTables(); // Reload tables after deletion
+            } else {
+                console.error('Error deleting category:', result.message);
+            }
+        })
+        .catch(error => console.error('Error deleting category:', error));
+}
+
 function createCategoryCard(categoryName) {
     const categoryCardsContainer = document.getElementById('category-cards-container');
     const card = document.createElement('div');
@@ -367,15 +395,43 @@ function createCategoryCard(categoryName) {
     card.innerHTML = `
         <div class="card-header">${categoryName}</div>
         <div class="card-body">
-            <p class="card-text">Click to view ${categoryName} details.</p>
-            <button class="btn btn-primary view-category-btn" data-category="${categoryName}">View Category</button>
+            <div class="d-flex justify-content-between align-items-center">
+                <button class="btn btn-primary view-category-btn" data-category="${categoryName}">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                <button class="btn btn-light edit-category-btn" data-category="${categoryName}">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="btn btn-light delete-category-btn" data-category="${categoryName}">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
         </div>
     `;
+
+    // View functionality
     card.querySelector('.view-category-btn').addEventListener('click', () => {
+        // Redirect to the view page for this category
         window.location.href = `view_table.html?table=${categoryName}`;
     });
+
+    // Edit functionality
+    card.querySelector('.edit-category-btn').addEventListener('click', () => {
+        localStorage.setItem('currentCategoryName', categoryName);
+        loadCategoriesForEdit(categoryName);
+    });
+
+    // Delete functionality
+    card.querySelector('.delete-category-btn').addEventListener('click', () => {
+        if (confirm(`Are you sure you want to delete the category "${categoryName}"?`)) {
+            dropCategory(categoryName);
+        }
+    });
+
     categoryCardsContainer.appendChild(card);
 }
+
+
 
         // Load user-specific tables into the dropdown menu and create card views
 function loadUserTables() {
@@ -597,11 +653,11 @@ document.getElementById('confirm-drop').addEventListener('click', () => {
 
         });
 
-        // Logout functionality
-        document.getElementById('logout').addEventListener('click', () => {
-            localStorage.removeItem('userId');
-            window.location.href = 'index.html'; // Redirect to login page
-        });
+        document.querySelector('.logout-btn').addEventListener('click', () => {
+    localStorage.removeItem('userId');
+    window.location.href = 'index.html';
+});
+
     </script>
 </body>
 
