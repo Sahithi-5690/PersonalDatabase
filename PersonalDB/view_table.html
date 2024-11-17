@@ -131,27 +131,89 @@
             }
     
             // Load table data along with schema metadata
-            function loadTableDataAndMetadata(tableName) {
-                Promise.all([
-                    fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`).then(response => response.json()),
-                    fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`).then(response => response.json())
-                ])
-                .then(([dataResponse, schemaResponse]) => {
-                    if (!dataResponse.data || dataResponse.data.length === 0) {
-                        document.getElementById('card-details').innerHTML = 'No data found in this Category.';
-                        return;
-                    }
-                    if (!schemaResponse.data || schemaResponse.data.length === 0) {
-                        console.error('No schema data found for this table.');
-                        return;
-                    }
-                    renderTable(dataResponse.data, schemaResponse.data);
-                })
-                .catch(error => {
-                    console.error('Error loading table data or metadata:', error);
-                    document.getElementById('card-details').innerHTML = 'Error loading data: ' + error.message;
-                });
-            }
+function loadTableDataAndMetadata(tableName) {
+    Promise.all([
+        fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`).then(response => response.json()),
+        fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`).then(response => response.json())
+    ])
+    .then(([dataResponse, schemaResponse]) => {
+        const cardDetails = document.getElementById('card-details');
+
+        // Check if schema response is valid
+        const schemaData = schemaResponse.data;
+        if (!schemaData || schemaData.length === 0) {
+            console.warn('No Fields are present in this category. Please add fields to insert data into this category.');
+            
+            // Show a generic table structure when schema is not available
+            cardDetails.innerHTML = `
+                <div class="alert alert-warning">
+                    No Fields are present in this category. Please add fields to insert data into this category.
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Column 1</th>
+                                <th>Column 2</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3" class="text-center">
+                                    No data found. Please add data using the <i class="fas fa-plus"></i> button below.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            return;
+        }
+
+        if (!dataResponse.data || dataResponse.data.length === 0) {
+    // Render an empty table using the schema columns
+    let tableHTML = `
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        ${schemaResponse.data.map(field => `<th>${field.name}</th>`).join('')}
+                        <th class="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="${schemaResponse.data.length + 1}" class="text-center">
+                            No data found in this category. Please add data by clicking on the <strong>+</strong> button below.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    // Inject the table HTML into the page
+    cardDetails.innerHTML = tableHTML;
+
+    return;
+}
+
+
+
+        // Render the table with existing data
+        renderTable(dataResponse.data, schemaData);
+    })
+    .catch(error => {
+        console.error('Error loading table data or metadata:', error);
+        document.getElementById('card-details').innerHTML = `
+            <div class="alert alert-danger">
+                Error loading data: ${error.message}
+            </div>
+        `;
+    });
+}
+
     
             // Function to render table data in a styled tabular form
 function renderTable(data, schema) {
