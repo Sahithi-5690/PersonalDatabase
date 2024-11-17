@@ -33,7 +33,12 @@
                         <ul class="dropdown-menu" id="dropdown-menu"></ul>
                     </li>
                 </ul>
-                <button type="button" class="btn btn-outline-danger logout-btn">Logout</button>
+                <div class="search-container">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search Category">
+                    <span id="clear-btn" class="clear-icon">&times;</span>
+                    <button id="search-btn" class="btn btn-outline-light"><i class="fas fa-search"></i></button>
+                </div>
+               <button type="button" class="btn btn-outline-danger logout-btn">Logout</button>
             </div>
         </div>
     </nav>
@@ -652,6 +657,73 @@ document.getElementById('confirm-drop').addEventListener('click', () => {
 });
 
         });
+
+   
+        const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-btn');
+    const searchBtn = document.getElementById('search-btn');
+
+    // Function to run the search
+    function searchCategory() {
+        const searchText = searchInput.value.trim().toLowerCase();
+
+        // Check if the input is empty
+        if (!searchText) {
+            alert('Please enter a category name to search.');
+            return;
+        }
+
+        // Fetch the latest category cards
+        const categoryCards = document.querySelectorAll('#category-cards-container .card');
+        let found = false;
+
+        // Loop through all category cards to find a match
+        categoryCards.forEach(card => {
+            const categoryName = card.querySelector('.card-header').textContent.trim().toLowerCase();
+
+            // Check for a case-insensitive match
+            if (categoryName === searchText) {
+                // Highlight the matched card
+                card.classList.add('highlight');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                found = true;
+
+                // Add click event to remove highlight when the card is clicked
+                const removeHighlight = () => {
+                    card.classList.remove('highlight');
+                    card.removeEventListener('click', removeHighlight);
+                };
+
+                card.addEventListener('click', removeHighlight);
+
+                // Auto-remove the highlight after 10 seconds if not clicked
+                setTimeout(() => {
+                    removeHighlight();
+                }, 10000);
+            } else {
+                // Remove highlight from non-matching cards
+                card.classList.remove('highlight');
+            }
+        });
+
+        // Show an alert if no matching category is found
+        if (!found) {
+            alert(`No category found with the name "${searchInput.value}".`);
+        }
+    }
+
+    // Attach event listeners
+    searchBtn.addEventListener('click', searchCategory);
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchInput.focus();
+        clearBtn.style.visibility = 'hidden';
+    });
+
+    searchInput.addEventListener('input', () => {
+        clearBtn.style.visibility = searchInput.value ? 'visible' : 'hidden';
+    });
 
         document.querySelector('.logout-btn').addEventListener('click', () => {
     localStorage.removeItem('userId');
