@@ -718,12 +718,12 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             }
         }
 
-        // Merge existing row data with the new row data, giving priority to new data
-        rowData = { ...existingRow[0], ...rowData };
-
-        // Remove unnecessary fields
-        delete rowData['id'];
-        delete rowData['tableName'];
+        // Merge existing row data with the new row data, preserving existing file URLs
+        for (const key in existingRow[0]) {
+            if (!rowData[key] && existingRow[0][key]?.startsWith('https://drive.google.com/')) {
+                rowData[key] = existingRow[0][key];
+            }
+        }
 
         // Construct the update query
         const columns = Object.keys(rowData);
@@ -745,7 +745,6 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
-
 
 
 // Endpoint to get a specific row from a specific table by row ID

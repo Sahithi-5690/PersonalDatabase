@@ -377,7 +377,9 @@ document.getElementById('row-form').addEventListener('submit', async (event) => 
 
         const result = await response.json();
         if (!result.success) {
-            throw new Error(result.message);
+            console.error('Edit failed:', result.message);
+            alert('Error updating row. Please try again.');
+            return;
         }
 
         alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
@@ -387,6 +389,7 @@ document.getElementById('row-form').addEventListener('submit', async (event) => 
         alert('An error occurred while processing the form. Please try again.');
     }
 });
+
 
 
 async function saveTextData(rowId, formData) {
