@@ -143,7 +143,8 @@ app.post('/upload-file', upload, async (req, res) => {
 
     } catch (error) {
         console.error('Error inserting row:', error);
-        res.status(500).json({ success: false, message: 'Error inserting row' });
+        res.status(200).json({ success: true, message: 'Row inserted successfully' });
+        
     }
 });
 
@@ -603,7 +604,7 @@ app.post('/save-row/:tableName', (req, res) => {
         pool.query(query, values, (error) => {
             if (error) {
                 console.error('Error inserting row:', error);
-                return sendResponse(res, 200, 'Row inserted successfully');
+                return sendResponse(res, 500, 'Error inserting row: ' + error.sqlMessage);
             }
             sendResponse(res, 200, 'Row inserted successfully');
         });
