@@ -354,7 +354,7 @@ function renderTable(data, schema) {
     document.getElementById('row-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const rowId = formData.get('id');
+    const rowId = document.getElementById('row-id').value || null;
     const tableName = new URLSearchParams(window.location.search).get('table');
 
     try {
@@ -365,7 +365,7 @@ function renderTable(data, schema) {
         }
 
         // Save or update the row data
-        await saveTextData(rowId || null, formData);
+        await saveTextData(document.getElementById('row-id').value || null, formData);
 
         // Show success message and close the modal
         alert(rowId ? 'Row updated successfully!' : 'Data is inserted successfully!');
