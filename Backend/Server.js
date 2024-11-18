@@ -9,7 +9,12 @@ require('dotenv').config();
 const { google } = require('googleapis');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: 'https://personaldatabase.onrender.com', // Allow requests from your front-end URL
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
