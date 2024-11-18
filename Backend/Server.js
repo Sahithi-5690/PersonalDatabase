@@ -268,10 +268,13 @@ app.post('/add-user', [
 createUserTable();
 createUserTablesTable();
 
-// Test endpoint
+app.use(express.static(path.join(__dirname, '../PersonalDB')));
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../PersonalDB', 'index.html'));
 });
+
+
 
 // Middleware for centralized error handling
 const errorHandler = (err, req, res, next) => {
