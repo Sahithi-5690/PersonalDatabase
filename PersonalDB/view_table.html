@@ -352,7 +352,7 @@ function loadRowData(rowId) {
 }
 
 
-    document.getElementById('row-form').addEventListener('submit', async (event) => {
+document.getElementById('row-form').addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const formData = new FormData(event.target);
@@ -371,7 +371,7 @@ function loadRowData(rowId) {
 
     try {
         const response = await fetch(url, {
-            method: 'POST',
+            method: rowId ? 'PUT' : 'POST',
             body: formData,
         });
 
