@@ -119,20 +119,26 @@ app.post('/upload-file', upload, async (req, res) => {
             }
         }
 
-        // Include non-file fields from `req.body`
-        for (let [key, value] of Object.entries(req.body)) {
-            if (key !== 'tableName' && key !== 'id') {
-                fieldUpdates[key] = value;
-            }
+        if (rowId) {
+            // Update existing row if `rowId` is provided
+            const columns = Object.keys(fieldUpdates);
+            const values = Object.values(fieldUpdates);
+            const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
+
+            const updateQuery = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
+            values.push(rowId);
+
+            await pool.query(updateQuery, values);
+            return res.status(200).json({ success: true, message: 'Files updated successfully', fieldUpdates });
+        } else {
+            // Insert new row if no `rowId` is provided
+            const columns = Object.keys(fieldUpdates);
+            const values = Object.values(fieldUpdates);
+            const insertQuery = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
+
+            await pool.query(insertQuery, values);
+            return res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
         }
-
-        const columns = Object.keys(fieldUpdates);
-        const values = Object.values(fieldUpdates);
-
-        const query = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
-        await pool.query(query, values);
-
-        res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
     } catch (error) {
         console.error('Error in upload-file:', error);
         res.status(500).json({ success: false, message: 'Error processing upload-file request' });
@@ -608,7 +614,7 @@ pool.query = util.promisify(pool.query);
 
 app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
     const tableName = req.params.tableName;
-    const rowId = req.params.rowId || req.body.rowId; // Ensure rowId is taken from either params or form data
+    const rowId = req.params.rowId || req.body.rowId;
     let rowData = req.body;
 
     try {
@@ -658,7 +664,6 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
 
                     rowData[attributeName] = fileUrl;
                     updatedFileUrls[attributeName] = fileUrl;
-
                 } catch (error) {
                     console.error('Error uploading file:', error);
                     return res.status(500).json({ success: false, message: 'Error uploading file to Google Drive' });

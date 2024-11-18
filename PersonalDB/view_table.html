@@ -361,78 +361,62 @@ function renderTable(data, schema) {
         // Log rowId and tableName for debugging
         console.log(`Submitting form for rowId: ${rowId}, tableName: ${tableName}`);
 
-        // Check for file uploads before processing text data
-        const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
-        if (hasFile) {
-            await handleFileUpload(formData);
+        // Append tableName and rowId to the form data
+        formData.append('tableName', tableName);
+        if (rowId) formData.append('rowId', rowId);
+
+        // Send the form data directly to the edit endpoint
+        const url = rowId
+            ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
+            : `https://personaldatabase.onrender.com/save-row/${tableName}`;
+        const method = rowId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            body: formData,
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            console.error('Error saving data:', result.message || 'Unknown error');
+            throw new Error(result.message);
         }
 
-        // Save or update the row data
-        const response = await saveTextData(rowId, formData);
-
-        // Check the server response
-        if (!response || !response.success) {
-            console.error('Unexpected server response:', response);
-            throw new Error(response?.message || 'Unknown error occurred.');
-        }
-
-        // Show success message and close the modal
         alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
         closeModalAndRefresh();
-
     } catch (error) {
         console.error('Error submitting form:', error.message || error);
         alert('An error occurred. Please try again.');
-        closeModalAndRefresh(); // Ensure the modal is closed even on error
+        closeModalAndRefresh();
     }
 });
+
 async function saveTextData(rowId, formData) {
-    const textData = {};
     const tableName = new URLSearchParams(window.location.search).get('table');
-
-    for (const [key, value] of formData.entries()) {
-        if (value instanceof File && value.size > 0) {
-            // File upload logic
-            formData.append('tableName', tableName);
-            const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', {
-                method: 'POST',
-                body: formData,
-            });
-            const fileResult = await fileResponse.json();
-            if (!fileResult.success) {
-                console.error('Error uploading file:', fileResult.message);
-                throw new Error(fileResult.message);
-            }
-            textData[key] = fileResult.data[key];
-        } else if (typeof value === 'string' && value.trim() !== '') {
-            // Only trim if the value is a string
-            textData[key] = value.trim();
-        }
-    }
-
     const url = rowId
         ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
         : `https://personaldatabase.onrender.com/save-row/${tableName}`;
     const method = rowId ? 'PUT' : 'POST';
 
-    const response = await fetch(url, {
-        method,
-        body: JSON.stringify(textData),
-        headers: { 'Content-Type': 'application/json' },
-    });
+    try {
+        const response = await fetch(url, {
+            method,
+            body: formData,
+        });
 
-    const result = await response.json();
-    if (!result.success) {
-        console.error('Error saving text data:', result.message);
-        throw new Error(result.message);
-    } else {
+        const result = await response.json();
+        if (!result.success) {
+            console.error('Error saving text data:', result.message);
+            throw new Error(result.message);
+        }
+
         alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
-        updateFileLinks(result.data?.updatedFileUrls);
         closeModalAndRefresh();
+    } catch (error) {
+        console.error('Error saving text data:', error.message);
+        throw error;
     }
 }
-
-
 
 
 // Function to handle editing a row, including file uploads
