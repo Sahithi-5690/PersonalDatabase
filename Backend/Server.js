@@ -608,20 +608,24 @@ pool.query = util.promisify(pool.query);
 
 app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
     const tableName = req.params.tableName;
-    const rowId = req.params.rowId;
+    const rowId = req.params.rowId || req.body.rowId; // Ensure rowId is taken from either params or form data
     let rowData = req.body;
 
     try {
+        if (!rowId) {
+            return sendResponse(res, 400, 'Invalid row ID for update.');
+        }
+
         // Check if the table exists
         const tableExists = await pool.query('SHOW TABLES LIKE ?', [tableName]);
         if (tableExists.length === 0) {
             return sendResponse(res, 404, 'Table not found');
         }
 
-        // Fetch the existing row
+        // Fetch the existing row data
         const existingRow = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
         if (existingRow.length === 0) {
-            return sendResponse(res, 404, 'Row not found');
+            return sendResponse(res, 404, 'Row not found. Update cannot proceed.');
         }
 
         const updatedFileUrls = {};
@@ -667,6 +671,10 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             ...existingRow[0],
             ...rowData,
         };
+
+        // Remove unnecessary fields
+        delete rowData['id'];
+        delete rowData['tableName'];
 
         // Construct the update query
         const columns = Object.keys(rowData);

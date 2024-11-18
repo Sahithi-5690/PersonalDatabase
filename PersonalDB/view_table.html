@@ -440,18 +440,18 @@ async function handleEditRow(formData, tableName, rowId) {
     const url = `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`;
 
     try {
+        // Append `rowId` to the form data explicitly
+        formData.append('rowId', rowId);
+
         // Send the form data (including files) to the edit-row endpoint using PUT
         const response = await fetch(url, {
             method: 'PUT',
             body: formData,
         });
 
-        // Parse the response
         const result = await response.json();
-
-        // Check if the update was successful
         if (!response.ok || !result.success) {
-            console.error('Error editing row:', result.message || 'Unknown error');
+            console.error('Edit failed:', result.message || 'Unknown error');
             alert('Error updating row. Please try again.');
         } else {
             alert('Row updated successfully!');
