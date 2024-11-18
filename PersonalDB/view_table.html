@@ -303,69 +303,75 @@ function renderTable(data, schema) {
             }
 
             function loadDynamicFields(rowId = null) {
-                fetch(`https://personaldatabase.onrender.com/get-table-schema/${encodeURIComponent(tableName)}`)
-                    .then(response => response.json())
-                    .then(schema => {
-                        const dynamicFields = document.getElementById('dynamic-fields');
-                        dynamicFields.innerHTML = '';
+    fetch(`https://personaldatabase.onrender.com/get-table-schema/${encodeURIComponent(tableName)}`)
+        .then(response => response.json())
+        .then(schema => {
+            const dynamicFields = document.getElementById('dynamic-fields');
+            dynamicFields.innerHTML = '';
 
-                        schema.data.forEach(field => {
-                            let fieldHTML = '';
-                            if (field.type === 'FILE') {
-                                fieldHTML = `
-                                    <div class="mb-3">
-                                        <label for="${field.name}" class="form-label">${field.name}</label>
-                                        <input type="file" class="form-control" id="${field.name}" name="${field.name}">
-                                        <div id="${field.name}-link" class="mt-2"></div>
-                                    </div>
-                                `;
-                            } else {
-                                fieldHTML = `<div class="mb-3"><label class="form-label">${field.name}</label><input type="text" class="form-control" id="${field.name}" name="${field.name}"></div>`;
-                            }
-                            dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
-                        });
-
-                        if (rowId) loadRowData(rowId);
-                    })
-                    .catch(error => console.error('Error loading schema:', error));
-            }
-
-             // Load row data including current file link if available
-    function loadRowData(rowId) {
-        fetch(`https://personaldatabase.onrender.com/get-row/${tableName}/${rowId}`)
-            .then(response => response.json())
-            .then(row => {
-                for (const key in row.data) {
-                    const input = document.getElementById(key);
-                    if (input && input.type === 'file' && row.data[key]) {
-                        const fileLink = document.getElementById(`${key}-link`);
-                        if (fileLink) {
-                            fileLink.innerHTML = `<a href="${row.data[key]}" target="_blank">View Current File</a>`;
-                            fileLink.classList.remove('hidden');
-                        }
-                    } else if (input) {
-                        input.value = row.data[key];
-                    }
+            schema.data.forEach(field => {
+                let fieldHTML = '';
+                if (field.type === 'FILE') {
+                    fieldHTML = `
+                        <div class="mb-3">
+                            <label for="${field.name}" class="form-label">${field.name}</label>
+                            <input type="file" class="form-control" id="${field.name}" name="${field.name}">
+                            <div id="${field.name}-link" class="mt-2"></div>
+                        </div>
+                    `;
+                } else {
+                    fieldHTML = `<div class="mb-3"><label class="form-label">${field.name}</label><input type="text" class="form-control" id="${field.name}" name="${field.name}"></div>`;
                 }
-            })
-            .catch(error => console.error('Error loading row data:', error));
-    }
+                dynamicFields.insertAdjacentHTML('beforeend', fieldHTML);
+            });
+
+            if (rowId) loadRowData(rowId);
+        })
+        .catch(error => console.error('Error loading schema:', error));
+}
+
+
+function loadRowData(rowId) {
+    fetch(`https://personaldatabase.onrender.com/get-row/${tableName}/${rowId}`)
+        .then(response => response.json())
+        .then(row => {
+            for (const key in row.data) {
+                const input = document.getElementById(key);
+                if (input && input.type === 'file' && row.data[key]) {
+                    const fileLink = document.getElementById(`${key}-link`);
+                    if (fileLink) {
+                        fileLink.innerHTML = `<a href="${row.data[key]}" target="_blank">View Current File</a>`;
+                        fileLink.classList.remove('hidden');
+                    }
+                } else if (input) {
+                    input.value = row.data[key];
+                }
+            }
+        })
+        .catch(error => console.error('Error loading row data:', error));
+}
+
 
     document.getElementById('row-form').addEventListener('submit', async (event) => {
     event.preventDefault();
+
     const formData = new FormData(event.target);
     const rowId = document.getElementById('row-id').value || null;
     const tableName = new URLSearchParams(window.location.search).get('table');
 
-    try {
-        // Determine the correct URL and method (PUT for edit, POST for new row)
-        const url = rowId
-            ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
-            : `https://personaldatabase.onrender.com/save-row/${tableName}`;
-        const method = rowId ? 'PUT' : 'POST';
+    // Append tableName and rowId to formData if needed
+    formData.append('tableName', tableName);
+    if (rowId) {
+        formData.append('rowId', rowId);
+    }
 
+    const url = rowId
+        ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
+        : `https://personaldatabase.onrender.com/upload-file`;
+
+    try {
         const response = await fetch(url, {
-            method,
+            method: 'POST',
             body: formData,
         });
 

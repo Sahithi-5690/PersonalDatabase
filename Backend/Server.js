@@ -592,36 +592,66 @@ app.delete('/drop-table', checkUserExists, (req, res) => {
     });
 });
 
-// Endpoint to save a row in a table
-app.post('/save-row/:tableName', (req, res) => {
+app.post('/save-row/:tableName', upload, async (req, res) => {
     const tableName = req.params.tableName;
     const rowData = req.body;
+    const fieldUpdates = {};
 
-    // Check if the table exists
-    pool.query('SHOW TABLES LIKE ?', [tableName], (error, results) => {
-        if (error) {
-            console.error('Error checking table existence:', error);
-            return sendResponse(res, 500, 'Error checking table existence');
-        }
-        if (results.length === 0) {
-            console.error('Table not found:', tableName);
-            return sendResponse(res, 404, 'Table not found');
-        }
-
-        // Prepare the insert query
-        const columns = Object.keys(rowData);
-        const values = Object.values(rowData);
-        const placeholders = columns.map(() => '?').join(', '); // Create placeholders for values
-        const query = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${placeholders})`;
-
-        pool.query(query, values, (error) => {
-            if (error) {
-                console.error('Error inserting row:', error);
-                return sendResponse(res, 500, 'Error inserting row: ' + error.sqlMessage);
+    try {
+        // Handle text data
+        for (const [key, value] of Object.entries(rowData)) {
+            if (key !== 'tableName' && key !== 'rowId') {
+                fieldUpdates[key] = value || null;
             }
-            sendResponse(res, 200, 'Row inserted successfully');
-        });
-    });
+        }
+
+        // Handle file uploads (if any)
+        if (req.files && req.files.length > 0) {
+            for (let file of req.files) {
+                const filePath = file.path;
+                const mimeType = file.mimetype;
+                const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
+
+                try {
+                    const response = await drive.files.create({
+                        requestBody: {
+                            name: file.originalname,
+                            mimeType: mimeType,
+                            parents: [folderId],
+                        },
+                        media: {
+                            mimeType: mimeType,
+                            body: fs.createReadStream(filePath),
+                        },
+                    });
+
+                    fs.unlinkSync(filePath);
+
+                    const fileId = response.data.id;
+                    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                    const attributeName = file.fieldname;
+
+                    fieldUpdates[attributeName] = fileUrl;
+                } catch (error) {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                    throw error;
+                }
+            }
+        }
+
+        // Insert new row with text and/or file data
+        const columns = Object.keys(fieldUpdates);
+        const values = Object.values(fieldUpdates);
+        const insertQuery = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
+
+        await pool.query(insertQuery, values);
+        return res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
+    } catch (error) {
+        console.error('Error in save-row:', error);
+        res.status(500).json({ success: false, message: 'Error processing save-row request' });
+    }
 });
 
 const util = require('util');
@@ -688,7 +718,7 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             }
         }
 
-        // Merge existing row data with the new row data, giving priority to new data
+        // Merge existing row data with the new row data
         rowData = { ...existingRow[0], ...rowData };
 
         // Remove unnecessary fields
