@@ -409,15 +409,33 @@ async function handleFileUpload(formData) {
     }
 }
 
-// Function to save text data (used for new row creation or updating non-file fields)
 async function saveTextData(rowId, formData) {
     const textData = {};
-    formData.forEach((value, key) => {
-        if (!(value instanceof File && value.size === 0)) textData[key] = value;
-    });
-
     const tableName = new URLSearchParams(window.location.search).get('table');
-    const url = rowId ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}` : `https://personaldatabase.onrender.com/save-row/${tableName}`;
+
+    // Process formData and handle files first
+    for (const [key, value] of formData.entries()) {
+        if (value instanceof File && value.size > 0) {
+            // Upload the file and get the URL
+            formData.append('tableName', tableName);
+            const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', {
+                method: 'POST',
+                body: formData,
+            });
+            const fileResult = await fileResponse.json();
+            if (!fileResult.success) {
+                console.error('Error uploading file:', fileResult.message);
+                throw new Error(fileResult.message);
+            }
+            textData[key] = fileResult.data[key];
+        } else if (value.trim() !== '') {
+            textData[key] = value;
+        }
+    }
+
+    const url = rowId
+        ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
+        : `https://personaldatabase.onrender.com/save-row/${tableName}`;
     const method = rowId ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
@@ -428,19 +446,15 @@ async function saveTextData(rowId, formData) {
 
     const result = await response.json();
     if (!result.success) {
-    console.error('Error saving text data:', result.message);
-    throw new Error(result.message);
-} else {
-    if (rowId) {
-        alert('Row updated successfully!');
+        console.error('Error saving text data:', result.message);
+        throw new Error(result.message);
     } else {
-        alert('Data is inserted successfully!');
+        alert(rowId ? 'Row updated successfully!' : 'Data is inserted successfully!');
+        updateFileLinks(result.data?.updatedFileUrls);
+        closeModalAndRefresh();
     }
-    updateFileLinks(result.data?.updatedFileUrls);
-    closeModalAndRefresh();
 }
 
-}
 
 // Function to update file links in the UI after a successful update
 function updateFileLinks(updatedFileUrls) {
