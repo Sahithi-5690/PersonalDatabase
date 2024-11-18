@@ -428,13 +428,18 @@ async function saveTextData(rowId, formData) {
 
     const result = await response.json();
     if (!result.success) {
-        console.error('Error saving text data:', result.message);
-        throw new Error(result.message);
+    console.error('Error saving text data:', result.message);
+    throw new Error(result.message);
+} else {
+    if (rowId) {
+        alert('Row updated successfully!');
     } else {
-        alert(rowId ? 'Row updated successfully!' : 'New row added successfully!');
-        updateFileLinks(result.data?.updatedFileUrls);
-        closeModalAndRefresh();
+        alert('Data is inserted successfully!');
     }
+    updateFileLinks(result.data?.updatedFileUrls);
+    closeModalAndRefresh();
+}
+
 }
 
 // Function to update file links in the UI after a successful update
