@@ -386,6 +386,51 @@ function renderTable(data, schema) {
         closeModalAndRefresh(); // Ensure the modal is closed even on error
     }
 });
+async function saveTextData(rowId, formData) {
+    const textData = {};
+    const tableName = new URLSearchParams(window.location.search).get('table');
+
+    for (const [key, value] of formData.entries()) {
+        if (value instanceof File && value.size > 0) {
+            // File upload logic
+            formData.append('tableName', tableName);
+            const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', {
+                method: 'POST',
+                body: formData,
+            });
+            const fileResult = await fileResponse.json();
+            if (!fileResult.success) {
+                console.error('Error uploading file:', fileResult.message);
+                throw new Error(fileResult.message);
+            }
+            textData[key] = fileResult.data[key];
+        } else if (typeof value === 'string' && value.trim() !== '') {
+            // Only trim if the value is a string
+            textData[key] = value.trim();
+        }
+    }
+
+    const url = rowId
+        ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
+        : `https://personaldatabase.onrender.com/save-row/${tableName}`;
+    const method = rowId ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+        method,
+        body: JSON.stringify(textData),
+        headers: { 'Content-Type': 'application/json' },
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+        console.error('Error saving text data:', result.message);
+        throw new Error(result.message);
+    } else {
+        alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
+        updateFileLinks(result.data?.updatedFileUrls);
+        closeModalAndRefresh();
+    }
+}
 
 
 
@@ -441,10 +486,9 @@ async function saveTextData(rowId, formData) {
     const textData = {};
     const tableName = new URLSearchParams(window.location.search).get('table');
 
-    // Process formData and handle files first
     for (const [key, value] of formData.entries()) {
         if (value instanceof File && value.size > 0) {
-            // Upload the file and get the URL
+            // File upload logic
             formData.append('tableName', tableName);
             const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', {
                 method: 'POST',
@@ -456,8 +500,9 @@ async function saveTextData(rowId, formData) {
                 throw new Error(fileResult.message);
             }
             textData[key] = fileResult.data[key];
-        } else if (value.trim() !== '') {
-            textData[key] = value;
+        } else if (typeof value === 'string' && value.trim() !== '') {
+            // Only trim if the value is a string
+            textData[key] = value.trim();
         }
     }
 
@@ -475,9 +520,9 @@ async function saveTextData(rowId, formData) {
     const result = await response.json();
     if (!result.success) {
         console.error('Error saving text data:', result.message);
-        
+        throw new Error(result.message);
     } else {
-        alert(rowId ? 'Row updated successfully!' : 'Data is inserted successfully!');
+        alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
         updateFileLinks(result.data?.updatedFileUrls);
         closeModalAndRefresh();
     }
