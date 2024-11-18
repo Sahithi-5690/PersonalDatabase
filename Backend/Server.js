@@ -631,7 +631,7 @@ pool.query = util.promisify(pool.query);
 
 app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
     const tableName = req.params.tableName;
-    const rowId = req.params.rowId || req.body.rowId;
+    const rowId = req.params.rowId;
     let rowData = req.body;
 
     try {
@@ -673,14 +673,12 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
                         },
                     });
 
-                    // Delete the local file after upload
                     fs.unlinkSync(filePath);
 
                     const fileId = response.data.id;
                     const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
                     const attributeName = file.fieldname;
 
-                    // Update file URL in rowData
                     rowData[attributeName] = fileUrl;
                     updatedFileUrls[attributeName] = fileUrl;
                 } catch (error) {
@@ -690,11 +688,8 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             }
         }
 
-        // Merge rowData with existing row data (preserve old data if not updated)
-        rowData = {
-            ...existingRow[0],
-            ...rowData,
-        };
+        // Merge existing row data with the new row data, giving priority to new data
+        rowData = { ...existingRow[0], ...rowData };
 
         // Remove unnecessary fields
         delete rowData['id'];
@@ -717,9 +712,10 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         res.status(200).json({ success: true, message: 'Row updated successfully', updatedFileUrls });
     } catch (error) {
         console.error('Error in edit-row endpoint:', error);
-        res.status(500).json({ success: false, message: 'Internal server error: ' + error.message });
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
+
 
 // Endpoint to get a specific row from a specific table by row ID
 app.get('/get-row/:tableName/:rowId', (req, res) => {

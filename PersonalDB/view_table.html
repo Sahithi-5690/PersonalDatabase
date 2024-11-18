@@ -358,8 +358,14 @@ function renderTable(data, schema) {
     const tableName = new URLSearchParams(window.location.search).get('table');
 
     try {
-        const response = await fetch(`https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`, {
-            method: 'PUT',
+        // Determine the correct URL and method (PUT for edit, POST for new row)
+        const url = rowId
+            ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
+            : `https://personaldatabase.onrender.com/save-row/${tableName}`;
+        const method = rowId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
             body: formData,
         });
 
@@ -368,13 +374,14 @@ function renderTable(data, schema) {
             throw new Error(result.message);
         }
 
-        alert('Row updated successfully!');
+        alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
         location.reload();
     } catch (error) {
         console.error('Form submission error:', error);
         alert('An error occurred while processing the form. Please try again.');
     }
 });
+
 
 
 async function saveTextData(rowId, formData) {
