@@ -151,22 +151,22 @@ app.post('/upload-file', upload, async (req, res) => {
 
 // Database connection pool setup
 const pool = mysql.createPool({
-    connectionLimit: 10,
+    connectionLimit: 3,
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'personaldb'
 });
 
-// Ensure connection pool is working
 pool.getConnection((err, connection) => {
     if (err) {
-        console.error('Database connection failed: ' + err.stack);
+        console.error('Database connection failed:', err);
         return;
     }
-    console.log('Connected to database.');
-    connection.release(); // Release connection back to pool
+    // Use the connection here
+    connection.release(); // Release it after usage
 });
+
 
 // Middleware to check if user exists
 const checkUserExists = (req, res, next) => {
