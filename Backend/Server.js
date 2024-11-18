@@ -270,7 +270,7 @@ createUserTablesTable();
 
 // Test endpoint
 app.get('/', (req, res) => {
-    res.json("From Backend");
+    res.sendFile(path.join(__dirname, '../PersonalDB', 'index.html'));
 });
 
 // Middleware for centralized error handling
