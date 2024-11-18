@@ -358,26 +358,17 @@ function renderTable(data, schema) {
     const tableName = new URLSearchParams(window.location.search).get('table');
 
     try {
-        formData.append('tableName', tableName);
-        if (rowId) formData.append('rowId', rowId);
-
-        const endpoint = rowId
-            ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
-            : 'https://personaldatabase.onrender.com/upload-file';
-
-        const method = rowId ? 'PUT' : 'POST';
-
-        const response = await fetch(endpoint, {
-            method: method,
+        const response = await fetch(`https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`, {
+            method: 'PUT',
             body: formData,
         });
 
         const result = await response.json();
         if (!result.success) {
-            throw new Error(result.message || 'Unknown error occurred.');
+            throw new Error(result.message);
         }
 
-        alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
+        alert('Row updated successfully!');
         location.reload();
     } catch (error) {
         console.error('Form submission error:', error);

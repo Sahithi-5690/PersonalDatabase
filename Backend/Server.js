@@ -673,12 +673,14 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
                         },
                     });
 
+                    // Delete the local file after upload
                     fs.unlinkSync(filePath);
 
                     const fileId = response.data.id;
                     const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
                     const attributeName = file.fieldname;
 
+                    // Update file URL in rowData
                     rowData[attributeName] = fileUrl;
                     updatedFileUrls[attributeName] = fileUrl;
                 } catch (error) {
@@ -687,19 +689,12 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
                 }
             }
         }
-// Merge rowData, prioritizing uploaded file URLs, but preserving existing file URLs if no new file is uploaded
-rowData = {
-    ...existingRow[0],
-    ...rowData,
-    ...updatedFileUrls,
-};
 
-for (const key in existingRow[0]) {
-    if (existingRow[0][key] && !rowData[key]) {
-        rowData[key] = existingRow[0][key]; // Preserve existing file URL if no new file is uploaded
-    }
-}
-
+        // Merge rowData with existing row data (preserve old data if not updated)
+        rowData = {
+            ...existingRow[0],
+            ...rowData,
+        };
 
         // Remove unnecessary fields
         delete rowData['id'];
@@ -722,7 +717,7 @@ for (const key in existingRow[0]) {
         res.status(200).json({ success: true, message: 'Row updated successfully', updatedFileUrls });
     } catch (error) {
         console.error('Error in edit-row endpoint:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Internal server error: ' + error.message });
     }
 });
 
