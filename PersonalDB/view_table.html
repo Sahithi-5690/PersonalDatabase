@@ -358,24 +358,29 @@ function renderTable(data, schema) {
     const tableName = new URLSearchParams(window.location.search).get('table');
 
     try {
-        // Handle file uploads (if any) before processing text data
-        const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
-        if (hasFile) {
-            await handleFileUpload(formData);
+        // Ensure rowId is correctly set
+        if (rowId) {
+            // Editing an existing row
+            await handleEditRow(formData, tableName, rowId);
+        } else {
+            // Inserting a new row
+            const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
+            if (hasFile) {
+                await handleFileUpload(formData);
+            }
+            await saveTextData(null, formData);
         }
 
-        // Save or update the row data
-        await saveTextData(document.getElementById('row-id').value || null, formData);
-
-        // Show success message and close the modal
-        alert(rowId ? 'Row updated successfully!' : 'Data is inserted successfully!');
+        alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
         closeModalAndRefresh();
 
     } catch (error) {
         console.error('Error submitting form:', error);
-        closeModalAndRefresh(); // Ensure the modal is closed even on error
+        alert('An error occurred. Please try again.');
+        closeModalAndRefresh();
     }
 });
+
 
 
 // Function to handle editing a row, including file uploads

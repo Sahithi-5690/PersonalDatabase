@@ -619,16 +619,21 @@ pool.query = util.promisify(pool.query);
 app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
     const tableName = req.params.tableName;
     const rowId = req.params.rowId;
-    let rowData = req.body; // Non-file data
+    let rowData = req.body;
 
     try {
+        // Ensure rowId is valid
+        if (!rowId) {
+            return sendResponse(res, 400, 'Invalid row ID for update.');
+        }
+
         // Check if the table exists
         const tableExists = await pool.query('SHOW TABLES LIKE ?', [tableName]);
         if (tableExists.length === 0) {
             return sendResponse(res, 404, 'Table not found');
         }
 
-        // Fetch the existing row to ensure it exists
+        // Fetch the existing row
         const existingRow = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
         if (existingRow.length === 0) {
             return sendResponse(res, 404, 'Row not found. Update cannot proceed.');
@@ -687,11 +692,10 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         const values = columns.map(key => rowData[key]);
         const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
 
-        // Prepare the update query
+        // Execute the update query
         const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
         values.push(rowId);
 
-        // Execute the update query
         const result = await pool.query(query, values);
 
         if (result.affectedRows === 0) {
@@ -705,7 +709,6 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
-
 
 // Endpoint to get a specific row from a specific table by row ID
 app.get('/get-row/:tableName/:rowId', (req, res) => {
