@@ -151,12 +151,16 @@ app.post('/upload-file', upload, async (req, res) => {
 
 // Database connection pool setup
 const pool = mysql.createPool({
-    connectionLimit: 3,
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'personaldb'
+    connectionLimit: 2, // Reduce due to Clever Cloud's connection limit
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
+
 
 pool.getConnection((err, connection) => {
     if (err) {
