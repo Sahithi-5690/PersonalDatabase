@@ -82,11 +82,6 @@ app.post('/upload-file', upload, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Missing table name' });
     }
 
-    // Reject if `rowId` is provided, since this endpoint is for insertion only
-    if (rowId) {
-        return res.status(400).json({ success: false, message: 'Updates not allowed in upload-file. Use edit-row for updates.' });
-    }
-
     try {
         const fieldUpdates = {};
 
@@ -116,7 +111,6 @@ app.post('/upload-file', upload, async (req, res) => {
                 const attributeName = file.fieldname;
 
                 fieldUpdates[attributeName] = fileUrl;
-
             } catch (error) {
                 if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
@@ -125,29 +119,25 @@ app.post('/upload-file', upload, async (req, res) => {
             }
         }
 
-        // Add non-file inputs (from req.body) to fieldUpdates, excluding 'id'
+        // Include non-file fields from `req.body`
         for (let [key, value] of Object.entries(req.body)) {
-            if (key !== 'tableName' && key !== 'rowId' && key !== 'id') {
+            if (key !== 'tableName' && key !== 'id') {
                 fieldUpdates[key] = value;
             }
         }
 
-        // Insert a new row without specifying 'id'
         const columns = Object.keys(fieldUpdates);
         const values = Object.values(fieldUpdates);
-        const query = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
 
+        const query = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
         await pool.query(query, values);
 
         res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
-
     } catch (error) {
-        console.error('Error inserting row:', error);
-        res.status(200).json({ success: true, message: 'Row inserted successfully' });
-        
+        console.error('Error in upload-file:', error);
+        res.status(500).json({ success: false, message: 'Error processing upload-file request' });
     }
 });
-
 
 
 // Database connection pool setup
@@ -622,11 +612,6 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
     let rowData = req.body;
 
     try {
-        // Ensure rowId is valid
-        if (!rowId) {
-            return sendResponse(res, 400, 'Invalid row ID for update.');
-        }
-
         // Check if the table exists
         const tableExists = await pool.query('SHOW TABLES LIKE ?', [tableName]);
         if (tableExists.length === 0) {
@@ -636,7 +621,7 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         // Fetch the existing row
         const existingRow = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
         if (existingRow.length === 0) {
-            return sendResponse(res, 404, 'Row not found. Update cannot proceed.');
+            return sendResponse(res, 404, 'Row not found');
         }
 
         const updatedFileUrls = {};
@@ -677,11 +662,7 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             }
         }
 
-        // Remove 'id' and 'tableName' from rowData
-        delete rowData['id'];
-        delete rowData['tableName'];
-
-        // Merge with existing data
+        // Merge rowData with existing row data
         rowData = {
             ...existingRow[0],
             ...rowData,
@@ -692,18 +673,16 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         const values = columns.map(key => rowData[key]);
         const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
 
-        // Execute the update query
         const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
         values.push(rowId);
 
+        // Execute the update query
         const result = await pool.query(query, values);
-
         if (result.affectedRows === 0) {
             return sendResponse(res, 500, 'Update failed. No rows were modified.');
         }
 
         res.status(200).json({ success: true, message: 'Row updated successfully', updatedFileUrls });
-
     } catch (error) {
         console.error('Error in edit-row endpoint:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });

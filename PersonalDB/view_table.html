@@ -439,19 +439,27 @@ async function saveTextData(rowId, formData) {
 async function handleEditRow(formData, tableName, rowId) {
     const url = `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`;
 
-    // Send the form data (including files) to the edit-row endpoint using PUT
-    const response = await fetch(url, {
-        method: 'PUT',
-        body: formData,
-    });
+    try {
+        // Send the form data (including files) to the edit-row endpoint using PUT
+        const response = await fetch(url, {
+            method: 'PUT',
+            body: formData,
+        });
 
-    const result = await response.json();
-    if (!result.success) {
-        console.error('Error editing row:', result.message);
-    } else {
-        alert('Row updated successfully!');
-        updateFileLinks(result.data?.updatedFileUrls);
-        closeModalAndRefresh();
+        // Parse the response
+        const result = await response.json();
+
+        // Check if the update was successful
+        if (!response.ok || !result.success) {
+            console.error('Error editing row:', result.message || 'Unknown error');
+            alert('Error updating row. Please try again.');
+        } else {
+            alert('Row updated successfully!');
+            closeModalAndRefresh();
+        }
+    } catch (error) {
+        console.error('Error in handleEditRow:', error);
+        alert('An error occurred while updating the row.');
     }
 }
 
