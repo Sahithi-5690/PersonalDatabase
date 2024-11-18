@@ -358,28 +358,35 @@ function renderTable(data, schema) {
     const tableName = new URLSearchParams(window.location.search).get('table');
 
     try {
-        // Ensure rowId is correctly set
-        if (rowId) {
-            // Editing an existing row
-            await handleEditRow(formData, tableName, rowId);
-        } else {
-            // Inserting a new row
-            const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
-            if (hasFile) {
-                await handleFileUpload(formData);
-            }
-            await saveTextData(null, formData);
+        // Log rowId and tableName for debugging
+        console.log(`Submitting form for rowId: ${rowId}, tableName: ${tableName}`);
+
+        // Check for file uploads before processing text data
+        const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
+        if (hasFile) {
+            await handleFileUpload(formData);
         }
 
+        // Save or update the row data
+        const response = await saveTextData(rowId, formData);
+
+        // Check the server response
+        if (!response || !response.success) {
+            console.error('Unexpected server response:', response);
+            throw new Error(response?.message || 'Unknown error occurred.');
+        }
+
+        // Show success message and close the modal
         alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
         closeModalAndRefresh();
 
     } catch (error) {
-        console.error('Error submitting form:', error);
+        console.error('Error submitting form:', error.message || error);
         alert('An error occurred. Please try again.');
-        closeModalAndRefresh();
+        closeModalAndRefresh(); // Ensure the modal is closed even on error
     }
 });
+
 
 
 
