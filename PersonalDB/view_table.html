@@ -357,25 +357,27 @@ function renderTable(data, schema) {
     const rowId = formData.get('id');
     const tableName = new URLSearchParams(window.location.search).get('table');
 
-    // Check if there are any files in the form data
-    const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
-
     try {
-        // If rowId is present, it means we are editing an existing row
-        if (rowId) {
-            // Send form data (including files) directly to the edit-row endpoint
-            await handleEditRow(formData, tableName, rowId);
-        } else {
-            // If no rowId, we are adding a new row
-            if (hasFile) {
-                await handleFileUpload(formData);
-            }
-            await saveTextData(null, formData);
+        // Handle file uploads (if any) before processing text data
+        const hasFile = Array.from(formData.values()).some(value => value instanceof File && value.size > 0);
+        if (hasFile) {
+            await handleFileUpload(formData);
         }
+
+        // Save or update the row data
+        await saveTextData(rowId || null, formData);
+
+        // Show success message and close the modal
+        alert(rowId ? 'Row updated successfully!' : 'Data is inserted successfully!');
+        closeModalAndRefresh();
+
     } catch (error) {
         console.error('Error submitting form:', error);
+        alert('Error: ' + error.message);
+        closeModalAndRefresh(); // Ensure the modal is closed even on error
     }
 });
+
 
 // Function to handle editing a row, including file uploads
 async function handleEditRow(formData, tableName, rowId) {
@@ -398,16 +400,31 @@ async function handleEditRow(formData, tableName, rowId) {
 }
 
 
-// Function to handle file uploads for new rows
 async function handleFileUpload(formData) {
+    const tableName = new URLSearchParams(window.location.search).get('table');
     formData.append('tableName', tableName);
-    const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', { method: 'POST', body: formData });
-    const fileResult = await fileResponse.json();
-    if (!fileResult.success) {
-        console.error('Error uploading file:', fileResult.message);
-        throw new Error(fileResult.message);
+
+    try {
+        const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!fileResponse.ok) {
+            const errorData = await fileResponse.json();
+            throw new Error(errorData.message || 'File upload error');
+        }
+
+        const fileResult = await fileResponse.json();
+        if (!fileResult.success) {
+            throw new Error(fileResult.message);
+        }
+    } catch (error) {
+        console.error('Error uploading file:', error.message);
+        throw new Error('Error uploading file: ' + error.message);
     }
 }
+
 
 async function saveTextData(rowId, formData) {
     const textData = {};
