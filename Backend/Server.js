@@ -126,15 +126,17 @@ app.post('/upload-file', upload, async (req, res) => {
             const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
 
             const updateQuery = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
-            values.push(rowId);
+values.push(rowId);
 
-            await pool.query(updateQuery, values);
-            return res.status(200).json({ success: true, message: 'Files updated successfully', fieldUpdates });
+await pool.query(updateQuery, values);
+return res.status(200).json({ success: true, message: 'Files updated successfully', fieldUpdates });
+
         } else {
             // Insert new row if no `rowId` is provided
             const columns = Object.keys(fieldUpdates);
             const values = Object.values(fieldUpdates);
             const insertQuery = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
+
 
             await pool.query(insertQuery, values);
             return res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
@@ -671,11 +673,13 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
             }
         }
 
-        // Merge rowData with existing row data
-        rowData = {
-            ...existingRow[0],
-            ...rowData,
-        };
+       // Merge rowData, prioritizing uploaded file URLs over existing row data
+rowData = {
+    ...existingRow[0],
+    ...rowData,
+    ...updatedFileUrls,
+};
+
 
         // Remove unnecessary fields
         delete rowData['id'];
