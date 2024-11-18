@@ -83,7 +83,7 @@ app.post('/upload-file', upload, async (req, res) => {
 
         // Handle text data from the form
         for (const [key, value] of Object.entries(req.body)) {
-            if (key !== 'tableName' && key !== 'rowId' && !(value instanceof File)) {
+            if (key !== 'tableName' && key !== 'rowId') {
                 fieldUpdates[key] = value || null;
             }
         }
@@ -161,7 +161,6 @@ app.post('/upload-file', upload, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error processing upload-file request' });
     }
 });
-
 
 
 // Database connection pool setup

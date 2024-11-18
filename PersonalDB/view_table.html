@@ -361,12 +361,10 @@ function renderTable(data, schema) {
         formData.append('tableName', tableName);
         if (rowId) formData.append('rowId', rowId);
 
-        // Determine the API endpoint (insert or update)
         const endpoint = rowId
             ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
             : 'https://personaldatabase.onrender.com/upload-file';
 
-        // Determine the HTTP method (PUT for update, POST for insert)
         const method = rowId ? 'PUT' : 'POST';
 
         const response = await fetch(endpoint, {
