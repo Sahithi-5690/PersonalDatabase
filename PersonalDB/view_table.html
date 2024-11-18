@@ -106,7 +106,7 @@
     
             // Function to load category list
             function loadCategoryList(userId) {
-                fetch(`http://127.0.0.1:8081/tables?userId=${userId}`)
+                fetch(`https://personaldatabase.onrender.com/tables?userId=${userId}`)
                     .then(response => response.json())
                     .then(tables => {
                         const dropdownMenu = document.getElementById('dropdown-menu');
@@ -133,8 +133,8 @@
             // Load table data along with schema metadata
 function loadTableDataAndMetadata(tableName) {
     Promise.all([
-        fetch(`http://127.0.0.1:8081/get-rows/${encodeURIComponent(tableName)}`).then(response => response.json()),
-        fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`).then(response => response.json())
+        fetch(`https://personaldatabase.onrender.com/get-rows/${encodeURIComponent(tableName)}`).then(response => response.json()),
+        fetch(`https://personaldatabase.onrender.com/get-table-schema/${encodeURIComponent(tableName)}`).then(response => response.json())
     ])
     .then(([dataResponse, schemaResponse]) => {
         const cardDetails = document.getElementById('card-details');
@@ -303,7 +303,7 @@ function renderTable(data, schema) {
             }
 
             function loadDynamicFields(rowId = null) {
-                fetch(`http://127.0.0.1:8081/get-table-schema/${encodeURIComponent(tableName)}`)
+                fetch(`https://personaldatabase.onrender.com/get-table-schema/${encodeURIComponent(tableName)}`)
                     .then(response => response.json())
                     .then(schema => {
                         const dynamicFields = document.getElementById('dynamic-fields');
@@ -332,7 +332,7 @@ function renderTable(data, schema) {
 
              // Load row data including current file link if available
     function loadRowData(rowId) {
-        fetch(`http://127.0.0.1:8081/get-row/${tableName}/${rowId}`)
+        fetch(`https://personaldatabase.onrender.com/get-row/${tableName}/${rowId}`)
             .then(response => response.json())
             .then(row => {
                 for (const key in row.data) {

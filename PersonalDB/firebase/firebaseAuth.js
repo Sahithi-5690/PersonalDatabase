@@ -32,7 +32,7 @@ document.getElementById('signUpForm').addEventListener('submit', async (event) =
         console.log('User ID stored in localStorage:', localStorage.getItem('userId'));
 
         // Send user info to backend to store in MySQL database
-        const response = await fetch('http://127.0.0.1:8081/add-user', {
+        const response = await fetch('https://personaldatabase.onrender.com/add-user', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
