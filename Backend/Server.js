@@ -71,10 +71,6 @@ app.get('/oauth2callback', async (req, res) => {
 });
 
 app.post('/upload-file', upload, async (req, res) => {
-    if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
-
     const tableName = req.body.tableName;
     const rowId = req.body.rowId;
 
@@ -86,57 +82,91 @@ app.post('/upload-file', upload, async (req, res) => {
         const fieldUpdates = {};
 
         // Handle file uploads
-        for (let file of req.files) {
-            const filePath = file.path;
-            const mimeType = file.mimetype;
-            const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
+        if (req.files && req.files.length > 0) {
+            for (let file of req.files) {
+                const filePath = file.path;
+                const mimeType = file.mimetype;
+                const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
 
-            try {
-                const response = await drive.files.create({
-                    requestBody: {
-                        name: file.originalname,
-                        mimeType: mimeType,
-                        parents: [folderId],
-                    },
-                    media: {
-                        mimeType: mimeType,
-                        body: fs.createReadStream(filePath),
-                    },
-                });
+                try {
+                    // Upload file to Google Drive
+                    const response = await drive.files.create({
+                        requestBody: {
+                            name: file.originalname,
+                            mimeType: mimeType,
+                            parents: [folderId],
+                        },
+                        media: {
+                            mimeType: mimeType,
+                            body: fs.createReadStream(filePath),
+                        },
+                    });
 
-                fs.unlinkSync(filePath);
-
-                const fileId = response.data.id;
-                const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
-                const attributeName = file.fieldname;
-
-                fieldUpdates[attributeName] = fileUrl;
-            } catch (error) {
-                if (fs.existsSync(filePath)) {
+                    // Delete the file from local storage after upload
                     fs.unlinkSync(filePath);
+
+                    const fileId = response.data.id;
+                    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                    const attributeName = file.fieldname;
+
+                    // Store the file URL in fieldUpdates
+                    fieldUpdates[attributeName] = fileUrl;
+                } catch (error) {
+                    // Clean up the file in case of an error
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                    throw error;
                 }
-                throw error;
             }
         }
 
         if (rowId) {
             // Update existing row if `rowId` is provided
+
+            // Fetch the existing row data to preserve current file URLs
+            const existingRow = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
+            if (existingRow.length === 0) {
+                return res.status(404).json({ success: false, message: 'Row not found' });
+            }
+
+            // Merge existing file URLs with new uploads
+            for (const key in existingRow[0]) {
+                if (existingRow[0][key] && !fieldUpdates[key]) {
+                    fieldUpdates[key] = existingRow[0][key]; // Preserve existing file URL if no new file is uploaded
+                }
+            }
+
+            // Include non-file text fields from `req.body`
+            for (const [key, value] of Object.entries(req.body)) {
+                if (key !== 'tableName' && key !== 'rowId') {
+                    fieldUpdates[key] = value;
+                }
+            }
+
             const columns = Object.keys(fieldUpdates);
             const values = Object.values(fieldUpdates);
             const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
 
             const updateQuery = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
-values.push(rowId);
+            values.push(rowId);
 
-await pool.query(updateQuery, values);
-return res.status(200).json({ success: true, message: 'Files updated successfully', fieldUpdates });
+            await pool.query(updateQuery, values);
+            return res.status(200).json({ success: true, message: 'Files and data updated successfully', fieldUpdates });
 
         } else {
             // Insert new row if no `rowId` is provided
+
+            // Include non-file text fields from `req.body`
+            for (const [key, value] of Object.entries(req.body)) {
+                if (key !== 'tableName' && key !== 'rowId') {
+                    fieldUpdates[key] = value;
+                }
+            }
+
             const columns = Object.keys(fieldUpdates);
             const values = Object.values(fieldUpdates);
             const insertQuery = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
-
 
             await pool.query(insertQuery, values);
             return res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
@@ -146,6 +176,7 @@ return res.status(200).json({ success: true, message: 'Files updated successfull
         res.status(500).json({ success: false, message: 'Error processing upload-file request' });
     }
 });
+
 
 
 // Database connection pool setup
@@ -672,13 +703,18 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
                 }
             }
         }
-
-       // Merge rowData, prioritizing uploaded file URLs over existing row data
+// Merge rowData, prioritizing uploaded file URLs, but preserving existing file URLs if no new file is uploaded
 rowData = {
     ...existingRow[0],
     ...rowData,
     ...updatedFileUrls,
 };
+
+for (const key in existingRow[0]) {
+    if (existingRow[0][key] && !rowData[key]) {
+        rowData[key] = existingRow[0][key]; // Preserve existing file URL if no new file is uploaded
+    }
+}
 
 
         // Remove unnecessary fields
