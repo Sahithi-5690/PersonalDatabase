@@ -600,7 +600,7 @@ app.post('/save-row/:tableName', upload, async (req, res) => {
     try {
         // Handle text data
         for (const [key, value] of Object.entries(rowData)) {
-            if (key !== 'tableName' && key !== 'rowId') {
+            if (key !== 'tableName') {
                 fieldUpdates[key] = value || null;
             }
         }
@@ -612,32 +612,25 @@ app.post('/save-row/:tableName', upload, async (req, res) => {
                 const mimeType = file.mimetype;
                 const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
 
-                try {
-                    const response = await drive.files.create({
-                        requestBody: {
-                            name: file.originalname,
-                            mimeType: mimeType,
-                            parents: [folderId],
-                        },
-                        media: {
-                            mimeType: mimeType,
-                            body: fs.createReadStream(filePath),
-                        },
-                    });
+                const response = await drive.files.create({
+                    requestBody: {
+                        name: file.originalname,
+                        mimeType,
+                        parents: [folderId],
+                    },
+                    media: {
+                        mimeType,
+                        body: fs.createReadStream(filePath),
+                    },
+                });
 
-                    fs.unlinkSync(filePath);
+                fs.unlinkSync(filePath);
 
-                    const fileId = response.data.id;
-                    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
-                    const attributeName = file.fieldname;
+                const fileId = response.data.id;
+                const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                const attributeName = file.fieldname;
 
-                    fieldUpdates[attributeName] = fileUrl;
-                } catch (error) {
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
-                    }
-                    throw error;
-                }
+                fieldUpdates[attributeName] = fileUrl;
             }
         }
 
@@ -647,10 +640,10 @@ app.post('/save-row/:tableName', upload, async (req, res) => {
         const insertQuery = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
 
         await pool.query(insertQuery, values);
-        return res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
+        res.status(200).json({ success: true, message: 'New row inserted successfully', fieldUpdates });
     } catch (error) {
         console.error('Error in save-row:', error);
-        res.status(500).json({ success: false, message: 'Error processing save-row request' });
+        res.status(500).json({ success: false, message: 'Error inserting row' });
     }
 });
 
@@ -665,10 +658,6 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
     let rowData = req.body;
 
     try {
-        if (!rowId) {
-            return sendResponse(res, 400, 'Invalid row ID for update.');
-        }
-
         // Check if the table exists
         const tableExists = await pool.query('SHOW TABLES LIKE ?', [tableName]);
         if (tableExists.length === 0) {
@@ -678,47 +667,42 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         // Fetch the existing row data
         const existingRow = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
         if (existingRow.length === 0) {
-            return sendResponse(res, 404, 'Row not found. Update cannot proceed.');
+            return sendResponse(res, 404, 'Row not found');
         }
 
         const updatedFileUrls = {};
 
-        // Handle file uploads (if any)
+        // Handle file uploads
         if (req.files && req.files.length > 0) {
             for (let file of req.files) {
                 const filePath = file.path;
                 const mimeType = file.mimetype;
                 const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
 
-                try {
-                    const response = await drive.files.create({
-                        requestBody: {
-                            name: file.originalname,
-                            mimeType: mimeType,
-                            parents: [folderId],
-                        },
-                        media: {
-                            mimeType: mimeType,
-                            body: fs.createReadStream(filePath),
-                        },
-                    });
+                const response = await drive.files.create({
+                    requestBody: {
+                        name: file.originalname,
+                        mimeType,
+                        parents: [folderId],
+                    },
+                    media: {
+                        mimeType,
+                        body: fs.createReadStream(filePath),
+                    },
+                });
 
-                    fs.unlinkSync(filePath);
+                fs.unlinkSync(filePath);
 
-                    const fileId = response.data.id;
-                    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
-                    const attributeName = file.fieldname;
+                const fileId = response.data.id;
+                const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                const attributeName = file.fieldname;
 
-                    rowData[attributeName] = fileUrl;
-                    updatedFileUrls[attributeName] = fileUrl;
-                } catch (error) {
-                    console.error('Error uploading file:', error);
-                    return res.status(500).json({ success: false, message: 'Error uploading file to Google Drive' });
-                }
+                rowData[attributeName] = fileUrl;
+                updatedFileUrls[attributeName] = fileUrl;
             }
         }
 
-        // Merge existing row data with the new row data, preserving existing file URLs
+        // Merge existing row data with new data
         for (const key in existingRow[0]) {
             if (!rowData[key] && existingRow[0][key]?.startsWith('https://drive.google.com/')) {
                 rowData[key] = existingRow[0][key];
@@ -730,19 +714,14 @@ app.put('/edit-row/:tableName/:rowId', upload, async (req, res) => {
         const values = columns.map(key => rowData[key]);
         const setClause = columns.map(column => `${mysql.escapeId(column)} = ?`).join(', ');
 
-        const query = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
+        const updateQuery = `UPDATE ${mysql.escapeId(tableName)} SET ${setClause} WHERE id = ?`;
         values.push(rowId);
 
-        // Execute the update query
-        const result = await pool.query(query, values);
-        if (result.affectedRows === 0) {
-            return sendResponse(res, 500, 'Update failed. No rows were modified.');
-        }
-
+        await pool.query(updateQuery, values);
         res.status(200).json({ success: true, message: 'Row updated successfully', updatedFileUrls });
     } catch (error) {
-        console.error('Error in edit-row endpoint:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        console.error('Error in edit-row:', error);
+        res.status(500).json({ success: false, message: 'Error updating row' });
     }
 });
 

@@ -356,41 +356,39 @@ document.getElementById('row-form').addEventListener('submit', async (event) => 
     event.preventDefault();
 
     const formData = new FormData(event.target);
-    const rowId = document.getElementById('row-id').value || null;
+    const rowId = document.getElementById('row-id').value;
     const tableName = new URLSearchParams(window.location.search).get('table');
 
-    // Append tableName and rowId to formData if needed
-    formData.append('tableName', tableName);
-    if (rowId) {
-        formData.append('rowId', rowId);
-    }
-
-    const url = rowId
-        ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
-        : `https://personaldatabase.onrender.com/upload-file`;
-
     try {
+        let url, method;
+
+        if (rowId) {
+            // Update existing row
+            url = `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`;
+            method = 'PUT';
+        } else {
+            // Insert new row
+            url = `https://personaldatabase.onrender.com/save-row/${tableName}`;
+            method = 'POST';
+        }
+
         const response = await fetch(url, {
-            method: rowId ? 'PUT' : 'POST',
+            method,
             body: formData,
         });
 
         const result = await response.json();
         if (!result.success) {
-            console.error('Edit failed:', result.message);
-            alert('Error updating row. Please try again.');
-            return;
+            alert(`Error: ${result.message}`);
+        } else {
+            alert(rowId ? 'Row updated successfully!' : 'New row inserted successfully!');
+            location.reload();
         }
-
-        alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
-        location.reload();
     } catch (error) {
         console.error('Form submission error:', error);
         alert('An error occurred while processing the form. Please try again.');
     }
 });
-
-
 
 async function saveTextData(rowId, formData) {
     const tableName = new URLSearchParams(window.location.search).get('table');
