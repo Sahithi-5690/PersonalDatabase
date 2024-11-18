@@ -358,38 +358,32 @@ function renderTable(data, schema) {
     const tableName = new URLSearchParams(window.location.search).get('table');
 
     try {
-        // Log rowId and tableName for debugging
-        console.log(`Submitting form for rowId: ${rowId}, tableName: ${tableName}`);
-
-        // Append tableName and rowId to the form data
         formData.append('tableName', tableName);
         if (rowId) formData.append('rowId', rowId);
 
-        // Send the form data directly to the edit endpoint
-        const url = rowId
+        // Determine the API endpoint (insert or update)
+        const endpoint = rowId
             ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
-            : `https://personaldatabase.onrender.com/save-row/${tableName}`;
-        const method = rowId ? 'PUT' : 'POST';
+            : 'https://personaldatabase.onrender.com/upload-file';
 
-        const response = await fetch(url, {
-            method,
+        const response = await fetch(endpoint, {
+            method: 'POST',
             body: formData,
         });
 
         const result = await response.json();
-        if (!response.ok || !result.success) {
-            console.error('Error saving data:', result.message || 'Unknown error');
-            throw new Error(result.message);
+        if (!result.success) {
+            throw new Error(result.message || 'Unknown error occurred.');
         }
 
         alert(rowId ? 'Row updated successfully!' : 'Data inserted successfully!');
-        closeModalAndRefresh();
+        location.reload();
     } catch (error) {
-        console.error('Error submitting form:', error.message || error);
-        alert('An error occurred. Please try again.');
-        closeModalAndRefresh();
+        console.error('Form submission error:', error);
+        alert('An error occurred while processing the form. Please try again.');
     }
 });
+
 
 async function saveTextData(rowId, formData) {
     const tableName = new URLSearchParams(window.location.search).get('table');

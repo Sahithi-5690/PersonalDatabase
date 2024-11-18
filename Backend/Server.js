@@ -81,6 +81,13 @@ app.post('/upload-file', upload, async (req, res) => {
     try {
         const fieldUpdates = {};
 
+        // Handle text data from the form
+        for (const [key, value] of Object.entries(req.body)) {
+            if (key !== 'tableName' && key !== 'rowId' && !(value instanceof File)) {
+                fieldUpdates[key] = value || null;
+            }
+        }
+
         // Handle file uploads
         if (req.files && req.files.length > 0) {
             for (let file of req.files) {
@@ -89,7 +96,6 @@ app.post('/upload-file', upload, async (req, res) => {
                 const folderId = '1chibBqjspiuPTEbi8lVu1PitkVgExCRY';
 
                 try {
-                    // Upload file to Google Drive
                     const response = await drive.files.create({
                         requestBody: {
                             name: file.originalname,
@@ -102,17 +108,14 @@ app.post('/upload-file', upload, async (req, res) => {
                         },
                     });
 
-                    // Delete the file from local storage after upload
                     fs.unlinkSync(filePath);
 
                     const fileId = response.data.id;
                     const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
                     const attributeName = file.fieldname;
 
-                    // Store the file URL in fieldUpdates
                     fieldUpdates[attributeName] = fileUrl;
                 } catch (error) {
-                    // Clean up the file in case of an error
                     if (fs.existsSync(filePath)) {
                         fs.unlinkSync(filePath);
                     }
@@ -122,25 +125,16 @@ app.post('/upload-file', upload, async (req, res) => {
         }
 
         if (rowId) {
-            // Update existing row if `rowId` is provided
-
-            // Fetch the existing row data to preserve current file URLs
+            // Update the existing row with both text and file data
             const existingRow = await pool.query(`SELECT * FROM ${mysql.escapeId(tableName)} WHERE id = ?`, [rowId]);
             if (existingRow.length === 0) {
                 return res.status(404).json({ success: false, message: 'Row not found' });
             }
 
-            // Merge existing file URLs with new uploads
+            // Preserve existing file URLs if no new file is uploaded
             for (const key in existingRow[0]) {
                 if (existingRow[0][key] && !fieldUpdates[key]) {
-                    fieldUpdates[key] = existingRow[0][key]; // Preserve existing file URL if no new file is uploaded
-                }
-            }
-
-            // Include non-file text fields from `req.body`
-            for (const [key, value] of Object.entries(req.body)) {
-                if (key !== 'tableName' && key !== 'rowId') {
-                    fieldUpdates[key] = value;
+                    fieldUpdates[key] = existingRow[0][key];
                 }
             }
 
@@ -152,18 +146,9 @@ app.post('/upload-file', upload, async (req, res) => {
             values.push(rowId);
 
             await pool.query(updateQuery, values);
-            return res.status(200).json({ success: true, message: 'Files and data updated successfully', fieldUpdates });
-
+            return res.status(200).json({ success: true, message: 'Row updated successfully', fieldUpdates });
         } else {
-            // Insert new row if no `rowId` is provided
-
-            // Include non-file text fields from `req.body`
-            for (const [key, value] of Object.entries(req.body)) {
-                if (key !== 'tableName' && key !== 'rowId') {
-                    fieldUpdates[key] = value;
-                }
-            }
-
+            // Insert a new row with text and/or file data
             const columns = Object.keys(fieldUpdates);
             const values = Object.values(fieldUpdates);
             const insertQuery = `INSERT INTO ${mysql.escapeId(tableName)} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
