@@ -9,11 +9,23 @@ require('dotenv').config();
 const { google } = require('googleapis');
 
 const app = express();
+const allowedOrigins = ['http://127.0.0.1:5501', 'https://personaldatabase.onrender.com'];
+
 app.use(cors({
-    origin: 'https://personaldatabase.onrender.com', // Allow requests from your front-end URL
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+app.options('*', cors());
+
 
 app.use(express.json());
 
@@ -165,7 +177,7 @@ app.post('/upload-file', upload, async (req, res) => {
 
 // Database connection pool setup
 const pool = mysql.createPool({
-    connectionLimit: 2, // Reduce due to Clever Cloud's connection limit
+    connectionLimit: 10, // Reduce due to Clever Cloud's connection limit
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

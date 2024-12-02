@@ -132,8 +132,10 @@
     
 
     <script>
+        import { API_URL } from './firebase/config.js';
+        window.API_URL = API_URL; // Expose API_URL globally for inline scripts
         function loadCategoryDetails(categoryName) {
-    fetch(`https://personaldatabase.onrender.com/get-table-schema/${categoryName}`)
+    fetch(`${window.API_URL}/get-table-schema/${categoryName}`)
         .then(response => response.json())
         .then(result => {
             if (result.success) {
@@ -317,7 +319,7 @@ document.getElementById('edit-category-form').addEventListener('submit', async (
 
     try {
         // Send the update request to the backend
-        const response = await fetch(`https://personaldatabase.onrender.com/update-category`, {
+        const response = await fetch(`${window.API_URL}/update-category`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -375,7 +377,7 @@ document.getElementById('add-edit-attribute').addEventListener('click', function
 // Define dropCategory function here
 function dropCategory(categoryName) {
     const userId = localStorage.getItem('userId');
-    fetch(`https://personaldatabase.onrender.com/drop-table`, {
+    fetch(`${window.API_URL}/drop-table`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tableName: categoryName, userId })
@@ -441,7 +443,7 @@ function createCategoryCard(categoryName) {
         // Load user-specific tables into the dropdown menu and create card views
 function loadUserTables() {
     const userId = localStorage.getItem('userId');
-    fetch(`https://personaldatabase.onrender.com/tables?userId=${userId}`)
+    fetch(`${window.API_URL}/tables?userId=${userId}`)
         .then(response => response.json())
         .then(result => {
             if (result.success) {
@@ -567,7 +569,7 @@ document.getElementById('create-table-form').addEventListener('submit', async (e
 
     try {
         // Check if category name already exists
-        const checkResponse = await fetch(`https://personaldatabase.onrender.com/tables?userId=${userId}`);
+        const checkResponse = await fetch(`${window.API_URL}/tables?userId=${userId}`);
         const checkResult = await checkResponse.json();
 
         if (checkResult.success) {
@@ -578,7 +580,7 @@ document.getElementById('create-table-form').addEventListener('submit', async (e
             }
 
             // Send request to create a new category
-            const createResponse = await fetch(`https://personaldatabase.onrender.com/create-table`, {
+            const createResponse = await fetch(`${window.API_URL}/create-table`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -634,7 +636,7 @@ document.getElementById('confirm-drop').addEventListener('click', () => {
     
     // Proceed only if the user confirms
     if (userConfirmed) {
-        fetch(`https://personaldatabase.onrender.com/drop-table`, {
+        fetch(`${window.API_URL}/drop-table`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'

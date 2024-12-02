@@ -1,14 +1,15 @@
 // Import Firebase Authentication module and configuration
 import { auth } from './firebaseConfig.js'; // Ensure the path is correct for your project
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js';
+import { API_URL } from './config.js'; // Import dynamic API URL
 
 // Event listener for sign-up form submission
 document.getElementById('signUpForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const email = document.getElementById('rEmail').value;
-    const firstName = document.getElementById('fName').value;
-    const lastName = document.getElementById('lName').value;
+    const email = document.getElementById('rEmail').value.trim();
+    const firstName = document.getElementById('fName').value.trim();
+    const lastName = document.getElementById('lName').value.trim();
     const password = document.getElementById('rPassword').value;
 
     console.log('Sign-Up Form Data:', { email, firstName, lastName, password });
@@ -32,7 +33,7 @@ document.getElementById('signUpForm').addEventListener('submit', async (event) =
         console.log('User ID stored in localStorage:', localStorage.getItem('userId'));
 
         // Send user info to backend to store in MySQL database
-        const response = await fetch('https://personaldatabase.onrender.com/add-user', {
+        const response = await fetch(`${API_URL}/add-user`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -41,36 +42,28 @@ document.getElementById('signUpForm').addEventListener('submit', async (event) =
                 userId: user.uid,
                 email: email,
                 firstName: firstName,
-                lastName: lastName
-            })
+                lastName: lastName,
+            }),
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
         console.log('Server Response:', data);
 
         // Show success message
-showMessage
-(
-'User created successfully'
-,
-'signUpMessage'
-);
-// Display message on the form
-alert
-(
-'User created successfully'
-);
+        showMessage('User created successfully', 'signUpMessage');
+        alert('User created successfully');
 
         // Redirect to dashboard
-        window.location.href = 'index.html';
+        window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Sign Up Error:', error);
         showMessage('Unable to sign up: ' + error.message, 'signUpMessage');
-        alert('Sign-Up Error: ' + error.message); // Alert for critical errors
+        alert('Sign-Up Error: ' + error.message);
     }
 });
 
@@ -78,7 +71,7 @@ alert
 document.getElementById('signInForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
     console.log('Sign-In Form Data:', { email, password });
@@ -105,8 +98,8 @@ document.getElementById('signInForm').addEventListener('submit', async (event) =
         window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Sign In Error:', error);
-        showMessage('Invalid credentials, please use valid credentials', 'signInMessage');
-        alert('Invalid credentials, please use valid credentials'); // Alert for critical errors
+        showMessage('Invalid credentials, please use valid credentials.', 'signInMessage');
+        alert('Invalid credentials, please use valid credentials.');
     }
 });
 
@@ -116,5 +109,8 @@ function showMessage(message, elementId) {
     if (messageElement) {
         messageElement.style.display = 'block';
         messageElement.textContent = message;
+        setTimeout(() => {
+            messageElement.style.display = 'none';
+        }, 5000); // Auto-hide the message after 5 seconds
     }
 }

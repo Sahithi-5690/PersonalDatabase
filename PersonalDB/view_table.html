@@ -74,6 +74,8 @@
     </div>
 
     <script>
+        import { API_URL } from './firebase/config.js';
+        window.API_URL = API_URL; // Expose API_URL globally for inline scripts
         document.addEventListener('DOMContentLoaded', () => {
             const userId = localStorage.getItem('userId');
             if (!userId) {
@@ -106,7 +108,7 @@
     
             // Function to load category list
             function loadCategoryList(userId) {
-                fetch(`https://personaldatabase.onrender.com/tables?userId=${userId}`)
+                fetch(`${window.API_URL}/tables?userId=${userId}`)
                     .then(response => response.json())
                     .then(tables => {
                         const dropdownMenu = document.getElementById('dropdown-menu');
@@ -133,8 +135,8 @@
             // Load table data along with schema metadata
 function loadTableDataAndMetadata(tableName) {
     Promise.all([
-        fetch(`https://personaldatabase.onrender.com/get-rows/${encodeURIComponent(tableName)}`).then(response => response.json()),
-        fetch(`https://personaldatabase.onrender.com/get-table-schema/${encodeURIComponent(tableName)}`).then(response => response.json())
+        fetch(`${window.API_URL}/get-rows/${encodeURIComponent(tableName)}`).then(response => response.json()),
+        fetch(`${window.API_URL}/get-table-schema/${encodeURIComponent(tableName)}`).then(response => response.json())
     ])
     .then(([dataResponse, schemaResponse]) => {
         const cardDetails = document.getElementById('card-details');
@@ -297,13 +299,13 @@ function renderTable(data, schema) {
 
 
             async function deleteRow(rowId, tableName) {
-                const response = await fetch(`https://personaldatabase.onrender.com/delete-row/${tableName}/${rowId}`, { method: 'DELETE' });
+                const response = await fetch(`${window.API_URL}/delete-row/${tableName}/${rowId}`, { method: 'DELETE' });
                 const result = await response.json();
                 if (!result.success) throw new Error(result.message);
             }
 
             function loadDynamicFields(rowId = null) {
-    fetch(`https://personaldatabase.onrender.com/get-table-schema/${encodeURIComponent(tableName)}`)
+    fetch(`${window.API_URL}/get-table-schema/${encodeURIComponent(tableName)}`)
         .then(response => response.json())
         .then(schema => {
             const dynamicFields = document.getElementById('dynamic-fields');
@@ -332,7 +334,7 @@ function renderTable(data, schema) {
 
 
 function loadRowData(rowId) {
-    fetch(`https://personaldatabase.onrender.com/get-row/${tableName}/${rowId}`)
+    fetch(`${window.API_URL}/get-row/${tableName}/${rowId}`)
         .then(response => response.json())
         .then(row => {
             for (const key in row.data) {
@@ -364,11 +366,11 @@ document.getElementById('row-form').addEventListener('submit', async (event) => 
 
         if (rowId) {
             // Update existing row
-            url = `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`;
+            url = `${window.API_URL}/edit-row/${tableName}/${rowId}`;
             method = 'PUT';
         } else {
             // Insert new row
-            url = `https://personaldatabase.onrender.com/save-row/${tableName}`;
+            url = `${window.API_URL}/save-row/${tableName}`;
             method = 'POST';
         }
 
@@ -393,8 +395,8 @@ document.getElementById('row-form').addEventListener('submit', async (event) => 
 async function saveTextData(rowId, formData) {
     const tableName = new URLSearchParams(window.location.search).get('table');
     const url = rowId
-        ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
-        : `https://personaldatabase.onrender.com/save-row/${tableName}`;
+        ? `${window.API_URL}/edit-row/${tableName}/${rowId}`
+        : `${window.API_URL}/save-row/${tableName}`;
     const method = rowId ? 'PUT' : 'POST';
 
     try {
@@ -420,7 +422,7 @@ async function saveTextData(rowId, formData) {
 
 // Function to handle editing a row, including file uploads
 async function handleEditRow(formData, tableName, rowId) {
-    const url = `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`;
+    const url = `${window.API_URL}/edit-row/${tableName}/${rowId}`;
 
     try {
         // Append `rowId` to the form data explicitly
@@ -452,7 +454,7 @@ async function handleFileUpload(formData) {
     formData.append('tableName', tableName);
 
     try {
-        const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', {
+        const fileResponse = await fetch('${window.API_URL}/upload-file', {
             method: 'POST',
             body: formData,
         });
@@ -481,7 +483,7 @@ async function saveTextData(rowId, formData) {
         if (value instanceof File && value.size > 0) {
             // File upload logic
             formData.append('tableName', tableName);
-            const fileResponse = await fetch('https://personaldatabase.onrender.com/upload-file', {
+            const fileResponse = await fetch('${window.API_URL}/upload-file', {
                 method: 'POST',
                 body: formData,
             });
@@ -498,8 +500,8 @@ async function saveTextData(rowId, formData) {
     }
 
     const url = rowId
-        ? `https://personaldatabase.onrender.com/edit-row/${tableName}/${rowId}`
-        : `https://personaldatabase.onrender.com/save-row/${tableName}`;
+        ? `${window.API_URL}/edit-row/${tableName}/${rowId}`
+        : `${window.API_URL}/save-row/${tableName}`;
     const method = rowId ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
