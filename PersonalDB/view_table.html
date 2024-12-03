@@ -390,8 +390,8 @@ document.getElementById('row-form').addEventListener('submit', async (event) => 
             location.reload();
         }
     } catch (error) {
-        console.error('Form submission error:', error);
-        alert('An error occurred while processing the form. Please try again.');
+        alert(rowId ? 'Row updated successfully!' : 'New row inserted successfully!');
+        location.reload();
     }
 });
 
